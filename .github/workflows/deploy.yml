@@ -14,7 +14,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'dev' }}
+    environment:
+      name: ${{ inputs.environment || 'dev' }}
     permissions:
       contents: read
       packages: read
@@ -29,29 +30,36 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Configure kubeconfig from secret (optional)
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         run: |
-        if [ -n "${KUBE_CONFIG:-}" ]; then
-          mkdir -p "$HOME/.kube"
-          echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
-          echo "✓ Wrote kubeconfig from secret"
-        else
-          echo "↷ KUBE_CONFIG is empty; skipping. If you intended to use it, add it as an *Environment* secret on this repo."
-        fi
-      env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          if [ -n "${KUBE_CONFIG:-}" ]; then
+            mkdir -p "$HOME/.kube"
+            echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
+            echo "✓ Wrote kubeconfig from secret"
+          else
+            echo "↷ KUBE_CONFIG is empty; skipping. If you intended to use it, add it as an *Environment* secret on this repo."
+          fi
 
       - name: Deploy api-gateway
-        run: |
-          helm upgrade --install api-gateway deploy/helm/api-gateway             --namespace $NS --create-namespace             -f deploy/helm/api-gateway/values.${ENV}.yaml
         env:
           ENV: ${{ inputs.environment || 'dev' }}
           NS:  ${{ inputs.environment || 'dev' }}
+        run: |
+          helm upgrade --install api-gateway deploy/helm/api-gateway \
+            --namespace "$NS" --create-namespace \
+            -f "deploy/helm/api-gateway/values.${ENV}.yaml"
 
       - name: Deploy services
-        run: |
-          for svc in auth profile content notifications chat analytics; do
-            helm upgrade --install $svc deploy/helm/$svc               --namespace $NS               --set image.repository=ghcr.io/${{ github.repository_owner }}/$svc               --set image.tag=${{ github.sha }}               -f deploy/helm/$svc/values.${ENV}.yaml
-          done
         env:
           ENV: ${{ inputs.environment || 'dev' }}
           NS:  ${{ inputs.environment || 'dev' }}
+        run: |
+          for svc in auth profile content notifications chat analytics; do
+            helm upgrade --install "$svc" "deploy/helm/$svc" \
+              --namespace "$NS" \
+              --set "image.repository=ghcr.io/${{ github.repository_owner }}/$svc" \
+              --set "image.tag=${{ github.sha }}" \
+              -f "deploy/helm/$svc/values.${ENV}.yaml"
+          done
+
