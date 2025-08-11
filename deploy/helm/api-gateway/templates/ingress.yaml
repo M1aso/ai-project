@@ -5,15 +5,16 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/enable-websocket: "true"
 spec:
+  ingressClassName: {{ .Values.ingress.className | default "nginx" | quote }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    - host: {{ required ".Values.ingress.host is required (set it in values.<env>.yaml)" .Values.ingress.host | quote }}
       http:
         paths:
-          - path: /api/auth
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: auth
+                # IMPORTANT: route to the gateway service, not 'auth'
+                name: api-gateway
                 port:
-                  number: {{ .Values.service.port }}
-
+                  number: {{ .Values.service.port | default 8080 }}
