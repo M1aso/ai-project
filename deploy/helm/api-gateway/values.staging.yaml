@@ -1,0 +1,6 @@
+image:
+  repository: envoyproxy/envoy
+  tag: v1.30-latest
+service:
+  type: ClusterIP
+  port: 8080

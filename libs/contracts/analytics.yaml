@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Analytics API
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+  /api/analytics/dashboard:
+    get:
+      summary: Get dashboard metrics
+      responses:
+        '200': { description: OK }

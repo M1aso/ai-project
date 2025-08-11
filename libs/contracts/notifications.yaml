@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Notifications API
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+  /api/notifications/settings:
+    get:
+      summary: Get user notification settings
+      responses:
+        '200': { description: OK }
+    put:
+      summary: Update user notification settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Updated }

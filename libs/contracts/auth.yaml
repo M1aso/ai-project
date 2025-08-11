@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Auth API
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+  /api/auth/phone/send-code:
+    post:
+      summary: Send SMS code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
+              required: [phone]
+      responses:
+        '200': { description: Code sent }
+        '400': { description: Bad request }
+        '429': { description: Too many requests }
+
+  /api/auth/phone/verify:
+    post:
+      summary: Verify SMS code and issue tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
+                code: { type: string }
+                email: { type: string }
+                password: { type: string }
+              required: [phone, code]
+      responses:
+        '200': { description: OK }
+        '401': { description: Unauthorized }
+        '423': { description: Locked }
