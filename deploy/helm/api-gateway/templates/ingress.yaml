@@ -7,14 +7,13 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className | default "nginx" | quote }}
   rules:
-    - host: {{ required ".Values.ingress.host is required (set it in values.<env>.yaml)" .Values.ingress.host | quote }}
+    - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-          - path: /
+          - path: /api/auth
             pathType: Prefix
             backend:
               service:
-                # IMPORTANT: route to the gateway service, not 'auth'
-                name: api-gateway
+                name: auth
                 port:
-                  number: {{ .Values.service.port | default 8080 }}
+                  number: {{ .Values.service.port }}
