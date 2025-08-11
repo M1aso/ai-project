@@ -1,0 +1,53 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options: [dev, staging, prod]
+  push:
+    tags:
+      - "release-*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    permissions:
+      contents: read
+      packages: read
+      id-token: write  # if you use cloud OIDC
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Configure kubeconfig from secret (optional)
+        if: ${{ secrets.KUBE_CONFIG != '' }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${KUBE_CONFIG}" | base64 -d > $HOME/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy api-gateway
+        run: |
+          helm upgrade --install api-gateway deploy/helm/api-gateway             --namespace $NS --create-namespace             -f deploy/helm/api-gateway/values.${ENV}.yaml
+        env:
+          ENV: ${{ inputs.environment || 'dev' }}
+          NS:  ${{ inputs.environment || 'dev' }}
+
+      - name: Deploy services
+        run: |
+          for svc in auth profile content notifications chat analytics; do
+            helm upgrade --install $svc deploy/helm/$svc               --namespace $NS               --set image.repository=ghcr.io/${{ github.repository_owner }}/$svc               --set image.tag=${{ github.sha }}               -f deploy/helm/$svc/values.${ENV}.yaml
+          done
+        env:
+          ENV: ${{ inputs.environment || 'dev' }}
+          NS:  ${{ inputs.environment || 'dev' }}
