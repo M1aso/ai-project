@@ -1,6 +1,6 @@
 image:
-  repository: ghcr-creds
-  tag: latest
+  repository: ghcr.io/M1aso/auth
+  tag: dev         # default for local helm; CI overrides with the commit SHA    
 service:
   type: ClusterIP
   port: 8000

@@ -5,16 +5,15 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/enable-websocket: "true"
 spec:
-  ingressClassName: nginx
   rules:
-    - host: 45.146.164.70.nip.io
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /
+          - path: /api/auth
             pathType: Prefix
             backend:
               service:
-                name: api-gateway
+                name: auth
                 port:
-                  number: 8080
+                  number: {{ .Values.service.port }}
 
