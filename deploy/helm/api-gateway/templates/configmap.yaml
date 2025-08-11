@@ -3,109 +3,160 @@ kind: ConfigMap
 metadata:
   name: api-gateway-config
 data:
-  envoy.yaml: |
+  envoy.yaml: |-
     static_resources:
       listeners:
         - name: listener_0
           address:
-            socket_address: {{ socket_address | default({"address": "0.0.0.0", "port_value": 8080}) | tojson }}
+            socket_address:
+              address: 0.0.0.0
+              port_value: 8080
           filter_chains:
             - filters:
-              - name: envoy.filters.network.http_connection_manager
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                  stat_prefix: ingress_http
-                  route_config:
-                    name: local_route
-                    virtual_hosts:
-                      - name: backend
-                        domains: ["*"]
-                        routes:
-                          - match: {{ '{{' }} prefix: "/api/auth" {{ '}}' }}
-                            route: {{ '{{' }} cluster: auth {{ '}}' }}
-                          - match: {{ '{{' }} prefix: "/api/profile" {{ '}}' }}
-                            route: {{ '{{' }} cluster: profile {{ '}}' }}
-                          - match: {{ '{{' }} prefix: "/api/content" {{ '}}' }}
-                            route: {{ '{{' }} cluster: content {{ '}}' }}
-                          - match: {{ '{{' }} prefix: "/api/notifications" {{ '}}' }}
-                            route: {{ '{{' }} cluster: notifications {{ '}}' }}
-                          - match: {{ '{{' }} prefix: "/api/chat" {{ '}}' }}
-                            route: {{ '{{' }} cluster: chat {{ '}}' }}
-                          - match: {{ '{{' }} prefix: "/api/analytics" {{ '}}' }}
-                            route: {{ '{{' }} cluster: analytics {{ '}}' }}
-                  http_filters:
-                    - name: envoy.filters.http.jwt_authn
-                      typed_config:
-                        "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
-                        providers:
-                          main-jwt:
-                            issuer: "https://api.45.146.164.70.nip.io"
-                            remote_jwks:
-                              http_uri:
-                                uri: "https://api.45.146.164.70.nip.io/.well-known/jwks.json"
-                                cluster: jwt-jwks
-                                timeout: 5s
-                            forward: true
-                        rules:
-                          # 1) Allow healthz without JWT:
-                          - match: { prefix: "/healthz" }            # gateway's own health, if exposed
-                          - match: { prefix: "/api/auth/healthz" }   # auth service health through gateway
-                          # 2) Later, require JWT for other /api routes:
-                          - match: { prefix: "/api" }
-                            requires:
-                              provider_name: main-jwt
-                    - name: envoy.filters.http.router
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: ingress_http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                        - name: backend
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/api/auth" }
+                              route: { cluster: "auth" }
+                            - match: { prefix: "/api/profile" }
+                              route: { cluster: "profile" }
+                            - match: { prefix: "/api/content" }
+                              route: { cluster: "content" }
+                            - match: { prefix: "/api/notifications" }
+                              route: { cluster: "notifications" }
+                            - match: { prefix: "/api/chat" }
+                              route: { cluster: "chat" }
+                            - match: { prefix: "/api/analytics" }
+                              route: { cluster: "analytics" }
+                    http_filters:
+                      - name: envoy.filters.http.jwt_authn
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                          providers:
+                            main-jwt:
+                              issuer: "https://api.45.146.164.70.nip.io"
+                              remote_jwks:
+                                http_uri:
+                                  uri: "https://api.45.146.164.70.nip.io/.well-known/jwks.json"
+                                  cluster: jwt-jwks
+                                  timeout: 5s
+                              forward: true
+                          # allow health checks without JWT; require JWT for other /api paths
+                          rules:
+                            - match: { prefix: "/healthz" }
+                            - match: { prefix: "/api/auth/healthz" }
+                            - match: { prefix: "/api" }
+                              requires:
+                                provider_name: main-jwt
+                      - name: envoy.filters.http.router
+
       clusters:
         - name: auth
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: auth
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "auth", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: auth.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: profile
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: profile
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "profile", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: profile.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: content
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: content
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "content", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: content.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: notifications
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: notifications
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "notifications", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: notifications.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: chat
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: chat
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "chat", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: chat.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: analytics
-          connect_timeout: 0.25s
           type: STRICT_DNS
+          connect_timeout: 0.25s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: analytics
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "analytics", port_value: 8000 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: analytics.dev.svc.cluster.local
+                          port_value: 8000
+
         - name: jwt-jwks
-          connect_timeout: 1s
           type: LOGICAL_DNS
+          connect_timeout: 1s
           lb_policy: ROUND_ROBIN
           load_assignment:
             cluster_name: jwt-jwks
-            endpoints: [{{ '{{' }} lb_endpoints: [{{ '{{' }} endpoint: {{ '{{' }} address: {{ '{{' }} socket_address: {{ '{{' }} address: "issuer.example.com", port_value: 443 {{ '}}' }} {{ '}}' }} {{ '}}' }} ] {{ '}}' }}]
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: api.45.146.164.70.nip.io
+                          port_value: 443
           transport_socket:
             name: envoy.transport_sockets.tls
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+
