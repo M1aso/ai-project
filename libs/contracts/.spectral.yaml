@@ -1,0 +1,7 @@
+extends: ["spectral:oas"]   # built-in OpenAPI rules
+formats: ["oas3", "oas3_1"] # lint OAS 3.0 and 3.1
+rules:
+  oas3-schema: error
+  info-contact: warn
+  license-url: warn
+  operation-operationId-unique: warn
