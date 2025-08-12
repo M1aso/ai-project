@@ -1,13 +1,18 @@
 image:
-  repository: envoyproxy/envoy
-  tag: v1.30-latest
-
+  repository: ghcr.io/M1aso/auth
+  tag: dev         # default for local helm; CI overrides with the commit SHA    
 service:
   type: ClusterIP
   port: 8080
-
 ingress:
   enabled: true
   className: nginx
   host: 45.146.164.70.nip.io
-
+  path: /api/auth
+imagePullSecrets:
+  - name: ghcr-creds
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
