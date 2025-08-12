@@ -1,0 +1,22 @@
+image:
+  repository: envoyproxy/envoy
+  tag: v1.31.0
+  pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""            # set per env
+  annotations: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+routes:
+  auth:           { serviceName: auth,           servicePort: 8000 }
+  profile:        { serviceName: profile,        servicePort: 8000 }
+  content:        { serviceName: content,        servicePort: 8000 }
+  notifications:  { serviceName: notifications,  servicePort: 8000 }
+  chat:           { serviceName: chat,           servicePort: 8000 }
+  analytics:      { serviceName: analytics,      servicePort: 8000 }

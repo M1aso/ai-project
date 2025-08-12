@@ -1,13 +1,2 @@
-image:
-  repository: envoyproxy/envoy
-  tag: v1.30-latest
-
-service:
-  type: ClusterIP
-  port: 8080
-
 ingress:
-  enabled: true
-  className: nginx
-  host: 45.146.164.70.nip.io
-
+  host: "api.45.146.164.70.nip.io"

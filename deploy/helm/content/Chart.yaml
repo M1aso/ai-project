@@ -1,6 +1,6 @@
 apiVersion: v2
-name: auth
-description: Microservice auth
+name: content
+description: Microservice content
 type: application
 version: 0.1.0
 appVersion: "1.0.0"

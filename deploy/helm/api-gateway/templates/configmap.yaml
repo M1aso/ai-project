@@ -3,160 +3,50 @@ kind: ConfigMap
 metadata:
   name: api-gateway-config
 data:
-  envoy.yaml: |-
+  envoy.yaml: |
     static_resources:
       listeners:
-        - name: listener_0
+        - name: listener_http
           address:
-            socket_address:
-              address: 0.0.0.0
-              port_value: 8080
+            socket_address: { address: 0.0.0.0, port_value: {{ .Values.service.port }} }
           filter_chains:
             - filters:
                 - name: envoy.filters.network.http_connection_manager
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                     stat_prefix: ingress_http
+                    codec_type: AUTO
                     route_config:
                       name: local_route
                       virtual_hosts:
-                        - name: backend
-                          domains: ["*"]
+                        - name: default
+                          domains: [ {{- if .Values.ingress.host }}"{{ .Values.ingress.host }}", {{- end }}"*" ]
                           routes:
-                            - match: { prefix: "/api/auth" }
-                              route: { cluster: "auth" }
-                            - match: { prefix: "/api/profile" }
-                              route: { cluster: "profile" }
-                            - match: { prefix: "/api/content" }
-                              route: { cluster: "content" }
-                            - match: { prefix: "/api/notifications" }
-                              route: { cluster: "notifications" }
-                            - match: { prefix: "/api/chat" }
-                              route: { cluster: "chat" }
-                            - match: { prefix: "/api/analytics" }
-                              route: { cluster: "analytics" }
+{{- range $name, $cfg := .Values.routes }}
+                            - match: { prefix: "/api/{{ $name }}" }
+                              route:
+                                cluster: "{{ $name }}_cluster"
+                                prefix_rewrite: "/"
+{{- end }}
                     http_filters:
-                      - name: envoy.filters.http.jwt_authn
-                        typed_config:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
-                          providers:
-                            main-jwt:
-                              issuer: "https://api.45.146.164.70.nip.io"
-                              remote_jwks:
-                                http_uri:
-                                  uri: "https://api.45.146.164.70.nip.io/.well-known/jwks.json"
-                                  cluster: jwt-jwks
-                                  timeout: 5s
-                              forward: true
-                          # allow health checks without JWT; require JWT for other /api paths
-                          rules:
-                            - match: { prefix: "/healthz" }
-                            - match: { prefix: "/api/auth/healthz" }
-                            - match: { prefix: "/api" }
-                              requires:
-                                provider_name: main-jwt
                       - name: envoy.filters.http.router
-
       clusters:
-        - name: auth
+{{- range $name, $cfg := .Values.routes }}
+        - name: "{{ $name }}_cluster"
           type: STRICT_DNS
-          connect_timeout: 0.25s
+          connect_timeout: 2s
           lb_policy: ROUND_ROBIN
           load_assignment:
-            cluster_name: auth
+            cluster_name: "{{ $name }}_cluster"
             endpoints:
               - lb_endpoints:
                   - endpoint:
                       address:
                         socket_address:
-                          address: auth.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: profile
-          type: STRICT_DNS
-          connect_timeout: 0.25s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: profile
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: profile.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: content
-          type: STRICT_DNS
-          connect_timeout: 0.25s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: content
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: content.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: notifications
-          type: STRICT_DNS
-          connect_timeout: 0.25s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: notifications
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: notifications.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: chat
-          type: STRICT_DNS
-          connect_timeout: 0.25s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: chat
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: chat.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: analytics
-          type: STRICT_DNS
-          connect_timeout: 0.25s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: analytics
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: analytics.dev.svc.cluster.local
-                          port_value: 8000
-
-        - name: jwt-jwks
-          type: LOGICAL_DNS
-          connect_timeout: 1s
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: jwt-jwks
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: api.45.146.164.70.nip.io
-                          port_value: 443
-          transport_socket:
-            name: envoy.transport_sockets.tls
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-
+                          address: "{{ $cfg.serviceName }}.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: {{ $cfg.servicePort }}
+{{- end }}
+    admin:
+      access_log_path: /tmp/admin_access.log
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 9901 }
