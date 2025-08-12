@@ -1,19 +1,24 @@
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: api-gateway
+  name: {{ include "<chart>.fullname" . }}
   annotations:
-    nginx.ingress.kubernetes.io/enable-websocket: "true"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
-  ingressClassName: {{ .Values.ingress.className | default "nginx" | quote }}
+  {{- with .Values.ingress.ingressClassName }}
+  ingressClassName: {{ . }}
+  {{- end }}
   rules:
-    - host: {{ .Values.ingress.host | quote }}
-      http:
+    - http:
         paths:
-          - path: /api/auth
-            pathType: Prefix
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
             backend:
               service:
-                name: auth
+                name: {{ include "<chart>.fullname" . }}
                 port:
                   number: {{ .Values.service.port }}
+{{- end }}

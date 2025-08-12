@@ -9,6 +9,7 @@ ingress:
   className: nginx
   host: 45.146.164.70.nip.io
   path: /api/auth
+  ingress.pathType: Prefix
 imagePullSecrets:
   - name: ghcr-creds
 hpa:
