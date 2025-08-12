@@ -9,9 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm i -g @stoplight/spectral-cli
-      - run: spectral --version
-      - run: spectral lint "libs/contracts/*.yaml" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: |
+          npx @stoplight/spectral-cli lint "libs/contracts/*.yaml" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error
 
   unit_tests:
     needs: contracts_lint
@@ -26,6 +28,7 @@ jobs:
 
   build_and_push:
     needs: unit_tests
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
       matrix:
