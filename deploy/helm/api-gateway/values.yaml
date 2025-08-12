@@ -13,6 +13,12 @@ service:
   type: ClusterIP
   port: 8080
 
+jwtAuthn:
+  issuer: ""
+  jwksUri: ""
+  jwksHost: ""
+  jwksPort: 443
+
 routes:
   auth:           { serviceName: auth,           servicePort: 8000 }
   profile:        { serviceName: profile,        servicePort: 8000 }
