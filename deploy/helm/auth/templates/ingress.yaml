@@ -4,7 +4,13 @@ kind: Ingress
 metadata:
   name: {{ include "svc.fullname" . }}
   annotations:
-{{- toYaml .Values.ingress.annotations | nindent 4 }}
+{{- with .Values.ingress.annotations }}
+{{ toYaml . | nindent 4 }}
+{{- end }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+    nginx.ingress.kubernetes.io/limit-rps: "5"
 spec:
   ingressClassName: {{ .Values.ingress.className | quote }}
   rules:
