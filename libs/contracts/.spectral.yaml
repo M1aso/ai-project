@@ -5,3 +5,11 @@ rules:
   info-contact: warn
   license-url: warn
   operation-operationId-unique: warn
+  error-response-structure:
+    description: 4xx/5xx responses must reference the Error schema
+    given: "$..responses[?(@property && @property.match(/^(4|5)\\d{2}$/))]"
+    then:
+      field: content.application/json.schema.$ref
+      function: pattern
+      functionOptions:
+        match: '#/components/schemas/Error$'
