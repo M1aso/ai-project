@@ -58,6 +58,125 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 ```
 ---
 
+# Sprint 0 — GitHub plumbing
+
+### G0.1 — Initialize repo skeleton
+**Files**
+- create folders as per layout; add `README.md` in root + each service (one-liner).
+
+**Steps**
+1) Create directories.
+2) Add minimal readmes.
+
+**DoD**
+- Tree matches layout; no stray files.
+
+---
+### G0.2 — Contracts workspace (OpenAPI 3.1) + Spectral lint
+**Files**
+- `libs/contracts/.spectral.yaml`
+- `libs/contracts/{auth,profile,content,notifications,chat,analytics}.yaml` (stubs included in this kit)
+
+**Steps**
+1) Add Spectral config.
+2) Author minimal 3.1 stubs with `/healthz` for each service.
+
+**DoD**
+- `npx @stoplight/spectral-cli lint libs/contracts/*.yaml` exits 0 (wired into CI).
+
+---
+### G0.3 — GitHub Actions: **CI** (lint → test → build → push to GHCR)
+**Files**
+- `.github/workflows/ci.yml`
+
+**Steps**
+1) Lint OpenAPI with Spectral.
+2) Run unit tests (placeholders OK for now).
+3) Build Docker for each service; push to `ghcr.io/<org>/<service>:<sha>`.
+
+**DoD**
+- CI is green; images visible in GHCR.
+
+---
+### G0.4 — GitHub Actions: **Deploy** with Helm
+**Files**
+- `.github/workflows/deploy.yml`
+
+**Steps**
+1) Manual dispatch: input `environment = dev|staging|prod`.
+2) Auth to cluster (kubeconfig secret or OIDC).
+3) `helm upgrade --install` for api-gateway + services.
+
+**DoD**
+- Manual run to `dev` completes; resources healthy.
+
+---
+### G0.5 — GitHub Environments & Secrets
+**Action**
+- Create envs `dev|staging|prod`; add secrets: `KUBE_CONFIG` (or OIDC), `REGISTRY=ghcr.io`, `REGISTRY_USER`, `REGISTRY_TOKEN`.  
+- Add DB and app secrets as service vars later.
+
+**DoD**
+- Workflows can `kubectl get ns` and pull/push images.
+
+---
+
+# Sprint 1 — Platform: ingress, gateway, limits, deps
+
+### P1.1 — Namespaces & RBAC (bootstrap)
+**Files**
+- `deploy/k8s/namespaces.yaml` (create in your repo; apply in deploy workflow pre-step)
+
+**DoD**
+- Namespaces `dev|staging|prod` exist.
+
+---
+### P1.2 — Ingress (NGINX) with WebSockets
+**Files**
+- `deploy/helm/*/templates/ingress.yaml`
+
+**Steps**
+1) Add standard Upgrade/Connection headers.
+2) One host or path per service under `/api/<svc>/*` (example in chart).
+
+**DoD**
+- `/healthz` reachable; WS handshake for chat works.
+
+---
+### P1.3 — Envoy API Gateway with **jwt_authn**
+**Files**
+- `deploy/helm/api-gateway/templates/configmap.yaml` (Envoy)
+- `deploy/helm/api-gateway/values.*.yaml`
+
+**Steps**
+1) Configure `jwt_authn` with your `issuer` and JWKS.
+2) Route `/api/*` → upstream services; forward verified claims in headers.
+
+**DoD**
+- Missing/invalid JWT → 401 at gateway; valid JWT → reaches service with claims.
+
+---
+### P1.4 — Edge rate limiting for `/api/auth/*`
+**Files**
+- ingress annotations/policies in each service’s `ingress.yaml`
+
+**Steps**
+1) Per‑IP RPS limit.
+2) Optional: per‑phone key (hash header via annotation/sidecar).
+
+**DoD**
+- Synthetic burst test returns 429 as configured.
+
+---
+### P1.5 — Core dependencies online
+**Action**
+- Provision PostgreSQL, MinIO bucket(s), RabbitMQ, Redis; add connection secrets to envs.
+
+**DoD**
+- From a toolbox pod: PG auth OK; MinIO presigned PUT/GET OK; RabbitMQ publish/consume OK; Redis PING OK.
+
+---
+
 # Sprint 3 — Auth edges & hardening
 **Prefix**: `A3.*`  
 **Goal**: Finish flows from `requirements.md` §Auth: email flows, rotation, lockouts, rate limits, refresh model, probes/metrics.
