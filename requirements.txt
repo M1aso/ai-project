@@ -1,0 +1,8 @@
+fastapi
+alembic
+sqlalchemy
+pydantic
+prometheus_client
+email-validator
+pytest
+httpx
