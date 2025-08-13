@@ -12,7 +12,11 @@ service:
 
 resources: {}
 
-env: []  # e.g. [{ name: SOME_VAR, value: "value" }]
+env:
+  - name: MINIO_ENDPOINT
+    value: "minio:9000"
+  - name: MINIO_BUCKET
+    value: "avatars"
 
 ingress:
   enabled: false
