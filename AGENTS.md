@@ -12,7 +12,7 @@
 - **File boundaries**: Each task lists *Files Codex Can Touch*. Do not modify anything outside of these lists unless explicitly allowed.
 - **Tests & quality gates**:
   - Unit tests for all core paths and error cases.
-  - Contract lint (`npx @stoplight/spectral-cli lint libs/contracts/*.yaml -D`).
+  - Contract lint (`npx @stoplight/spectral-cli lint "libs/contracts/*.yaml" --ruleset libs/contracts/.spectral.yaml -D`).
   - Formatters/linters: Python (ruff/black), Go (gofmt/golangci-lint), Node (eslint/prettier).
   - Docker image build for the changed service. (including `Dockerfile` builds successfully on a clean machine)
   - Helm template & kube-linter validation.
@@ -357,6 +357,48 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 - 403 for non-admin; full CRUD happy path tested.
 
 ---
+
+### PR4.5 — Helm, probes, metrics, HPA
+**Files to touch**
+- `deploy/helm/profile/templates/deployment.yaml`
+- `deploy/helm/profile/values.*.yaml`
+- `services/profile/app/metrics.py`
+- `services/profile/app/main.py` (expose `/healthz`, `/readyz`, `/metrics`)
+
+**Steps**
+1. Add health/readiness probes; Prom metrics.  
+2. HPA: CPU>70%; requests/limits defined.  
+3. Sample Grafana dashboard JSON (optional).
+
+**DoD**
+- Helm deploy to `dev` succeeds; HPA scales under k6 load; metrics visible.
+
+---
+
+### PR4.6 — Containerize Profile (Dockerfile, .dockerignore, CI, Helm)
+**Goal**: Build a production-grade container for the Profile FastAPI service completed in PR4.1–PR4.5. Use a multi-stage image, run as non-root, expose health endpoints, and hook into CI + Helm.
+
+**Files to touch**
+- `services/profile/Dockerfile`
+- `services/profile/.dockerignore`
+- `deploy/helm/profile/values.yaml`
+- `.github/workflows/docker-profile.yml` (new, minimal build & push to GHCR)
+
+**Assumptions**
+- App entrypoint: `services/profile/app/main.py` exposes app (FastAPI).
+- Python version: 3.12 (adjust if `pyproject.toml/requirements.txt` says otherwise).
+- Health endpoints from PR4.5: `/healthz`, `/readyz`, `/metrics`.
+
+**DoD**
+- `services/auth/Dockerfile` builds successfully on a clean machine.
+- Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
+- `.dockerignore` prevents large/unnecessary context.
+- Helm `values.yaml` contains image repo/tag and probes for Auth.
+- GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
+- No secrets are added to the image or committed to Git.
+
+---
+
 
 # Sprint 5 — Content Service (Go API)
 **Prefix**: `C5.*`  
