@@ -14,8 +14,13 @@
   - Unit tests for all core paths and error cases.
   - Contract lint (`npx @stoplight/spectral-cli lint libs/contracts/*.yaml -D`).
   - Formatters/linters: Python (ruff/black), Go (gofmt/golangci-lint), Node (eslint/prettier).
-  - Docker image build for the changed service.
+  - Docker image build for the changed service. (including `Dockerfile` builds successfully on a clean machine)
   - Helm template & kube-linter validation.
+  - Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
+  - `.dockerignore` prevents large/unnecessary context.
+  - Helm `values.yaml` contains image repo/tag and probes for Auth.
+  - GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
+  - No secrets are added to the image or committed to Git.
 - **Security rules**: Never commit secrets. JWT validation (aud/iss), CSRF for cookies if used, rate limits, lockouts per requirements.
 - **Migrations**: Always idempotent; include `upgrade`/`downgrade`. Avoid destructive changes unless a dedicated migration task says so.
 - **Observability**: `/healthz`, `/readyz`, `/metrics` for every service; structured logs (JSON); correlation IDs from gateway.
@@ -139,6 +144,30 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 
 **DoD**
 - Helm deploy to `dev` succeeds; HPA scales under k6 load; metrics visible.
+
+---
+
+### A3.6 — Containerize Auth (Dockerfile, .dockerignore, CI, Helm)
+**Goal**: Build a production-grade container for the Auth FastAPI service completed in A3.1–A3.5. Use a multi-stage image, run as non-root, expose health endpoints, and hook into CI + Helm.
+
+**Files to touch**
+- `services/auth/Dockerfile`
+- `services/auth/.dockerignore`
+- `deploy/helm/auth/values.yaml`
+- `.github/workflows/docker-auth.yml` (new, minimal build & push to GHCR)
+
+**Assumptions**
+- App entrypoint: `services/auth/app/main.py` exposes app (FastAPI).
+- Python version: 3.12 (adjust if `pyproject.toml/requirements.txt` says otherwise).
+- Health endpoints from A3.5: `/healthz`, `/readyz`, `/metrics`.
+
+**DoD**
+- `services/auth/Dockerfile` builds successfully on a clean machine.
+- Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
+- `.dockerignore` prevents large/unnecessary context.
+- Helm `values.yaml` contains image repo/tag and probes for Auth.
+- GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
+- No secrets are added to the image or committed to Git.
 
 ---
 
