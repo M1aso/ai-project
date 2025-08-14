@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Notifications API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /healthz:
     get:
@@ -10,13 +10,59 @@ paths:
         '200':
           description: OK
 
-  /api/notifications/settings:
+  /api/notify/send:
+    post:
+      summary: Queue a notification for delivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, recipient, template]
+              properties:
+                channel:
+                  type: string
+                  enum: [email, sms, push]
+                recipient:
+                  type: string
+                template:
+                  type: string
+                data:
+                  type: object
+                idempotency_key:
+                  type: string
+      responses:
+        '202': { description: Queued }
+
+  /api/notify/preview:
+    post:
+      summary: Render a notification without sending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, template]
+              properties:
+                channel:
+                  type: string
+                  enum: [email, sms, push]
+                template:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200': { description: Rendered }
+
+  /api/subscriptions:
     get:
-      summary: Get user notification settings
+      summary: Get current user notification subscriptions
       responses:
         '200': { description: OK }
     put:
-      summary: Update user notification settings
+      summary: Update current user notification subscriptions
       requestBody:
         required: true
         content:

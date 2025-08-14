@@ -1,0 +1,10 @@
+<!-- Variables: user_name -->
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text>Hello {{ user_name }}, welcome!</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

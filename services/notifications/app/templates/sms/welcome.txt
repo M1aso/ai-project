@@ -1,0 +1,2 @@
+# Variables: user_name
+Hello {{ user_name }}, welcome aboard!
