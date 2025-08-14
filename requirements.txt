@@ -6,3 +6,6 @@ prometheus_client
 email-validator
 pytest
 httpx
+
+openpyxl
+PyYAML==6.0.1
