@@ -4,6 +4,10 @@ image:
 service:
   port: 8000
 
+env:
+  - name: REDIS_URL
+    value: redis://redis:6379
+
 imagePullSecrets:
   - name: ghcr
 
