@@ -1,0 +1,8 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/example/content-worker
+  tag: latest
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+env: []
+resources: {}

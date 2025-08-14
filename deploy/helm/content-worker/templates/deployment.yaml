@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "svc.fullname" . }}
+  labels: { app: {{ include "svc.fullname" . }} }
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: { app: {{ include "svc.fullname" . }} }
+  template:
+    metadata:
+      labels: { app: {{ include "svc.fullname" . }} }
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "svc.fullname" . }}
+          image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+{{- toYaml .Values.env | nindent 12 }}
+          resources:
+{{- toYaml .Values.resources | nindent 12 }}
