@@ -1,0 +1,34 @@
+name: profile docker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/profile/**'
+      - '.github/workflows/docker-profile.yml'
+  pull_request:
+    paths:
+      - 'services/profile/**'
+      - '.github/workflows/docker-profile.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/profile
+          file: ./services/profile/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ghcr.io/${{ github.repository_owner }}/profile:latest
