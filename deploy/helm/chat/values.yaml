@@ -12,7 +12,9 @@ service:
 
 resources: {}
 
-env: []  # e.g. [{ name: SOME_VAR, value: "value" }]
+env:
+  - name: REDIS_URL
+    value: redis://redis:6379
 
 ingress:
   enabled: false
