@@ -1,0 +1,5 @@
+// Variables: user_name
+{
+  "title": "Welcome",
+  "body": "Hello {{ user_name }}, welcome!"
+}
