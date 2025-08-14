@@ -393,7 +393,7 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 - `services/auth/Dockerfile` builds successfully on a clean machine.
 - Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
 - `.dockerignore` prevents large/unnecessary context.
-- Helm `values.yaml` contains image repo/tag and probes for Auth.
+- Helm `values.yaml` contains image repo/tag and probes for Profile.
 - GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
 - No secrets are added to the image or committed to Git.
 
@@ -411,6 +411,7 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 - `services/content/cmd/server/main.go`
 - `services/content/internal/{http,db,storage}`
 - `services/content/Dockerfile`
+- `services/content/.dockerignore`
 - `deploy/helm/content/*`
 
 **Steps**
@@ -561,6 +562,30 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 
 ---
 
+### N7.4 — Containerize Notifications (Dockerfile, .dockerignore, CI, Helm)
+**Goal**: Build a production-grade container for the Notifications FastAPI service completed in N7.1–N7.3. Use a multi-stage image, run as non-root, expose health endpoints, and hook into CI + Helm.
+
+**Files to touch**
+- `services/notifications/Dockerfile`
+- `services/notifications/.dockerignore`
+- `deploy/helm/notifications/values.yaml`
+- `.github/workflows/docker-notifications.yml` (new, minimal build & push to GHCR)
+
+**Assumptions**
+- App entrypoint: `services/notifications/app/main.py` exposes app (FastAPI).
+- Python version: 3.12 (adjust if `pyproject.toml/requirements.txt` says otherwise).
+- Health endpoints: `/healthz`, `/readyz`, `/metrics`.
+
+**DoD**
+- `services/notifications/Dockerfile` builds successfully on a clean machine.
+- Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
+- `.dockerignore` prevents large/unnecessary context.
+- Helm `values.yaml` contains image repo/tag and probes for Notifications.
+- GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
+- No secrets are added to the image or committed to Git.
+
+---
+
 # Sprint 8 — Chat Service (Node.js + Redis) — Part 1
 **Prefix**: `CH8.*`  
 **Goal**: WS server, contracts, gateway integration, presence with Redis.
@@ -572,6 +597,7 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 - `services/chat/package.json`
 - `services/chat/tsconfig.json`
 - `services/chat/Dockerfile`
+- `services/chat/.dockerignore`
 - `deploy/helm/chat/*`
 
 **Steps**
@@ -683,6 +709,30 @@ helm template deploy/helm/<service> | kubeval --ignore-missing-schemas
 
 **DoD**
 - Scheduled report appears in MinIO and can be downloaded.
+
+---
+
+### AN10.4 — Containerize Analytics (Dockerfile, .dockerignore, CI, Helm)
+**Goal**: Build a production-grade container for the Analytics FastAPI service completed in AN10.1–AN10.3. Use a multi-stage image, run as non-root, expose health endpoints, and hook into CI + Helm.
+
+**Files to touch**
+- `services/analytics/Dockerfile`
+- `services/analytics/.dockerignore`
+- `deploy/helm/analytics/values.yaml`
+- `.github/workflows/docker-analytics.yml` (new, minimal build & push to GHCR)
+
+**Assumptions**
+- App entrypoint: `services/analytics/app/main.py` exposes app (FastAPI).
+- Python version: 3.12 (adjust if `pyproject.toml/requirements.txt` says otherwise).
+- Health endpoints: `/healthz`, `/readyz`, `/metrics`.
+
+**DoD**
+- `services/analytics/Dockerfile` builds successfully on a clean machine.
+- Container runs as non-root, serves the FastAPI app on `${PORT:-8000}`, and `/healthz` returns 200.
+- `.dockerignore` prevents large/unnecessary context.
+- Helm `values.yaml` contains image repo/tag and probes for Analytics.
+- GitHub Actions workflow builds the image and pushes to GHCR on `main` pushes; PRs build without pushing.
+- No secrets are added to the image or committed to Git.
 
 ---
 
