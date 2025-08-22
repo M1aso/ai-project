@@ -92,14 +92,14 @@ kubectl wait --namespace ingress-nginx \
 
 # 6. Add Helm repositories
 log_info "Adding Helm repositories..."
-helm repo add bitnami https://charts.bitnami.com/bitnami
+# Note: Bitnami charts are now distributed via OCI registry, no need to add traditional repo
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 
 # 7. Install PostgreSQL
 log_info "Installing PostgreSQL..."
 if ! kubectl get namespace postgresql &> /dev/null; then
-    helm install postgresql bitnami/postgresql \
+    helm install postgresql oci://registry-1.docker.io/bitnamicharts/postgresql \
       --namespace postgresql \
       --create-namespace \
       --set auth.postgresPassword=postgres123 \
@@ -114,7 +114,7 @@ fi
 # 8. Install Redis
 log_info "Installing Redis..."
 if ! kubectl get namespace redis &> /dev/null; then
-    helm install redis bitnami/redis \
+    helm install redis oci://registry-1.docker.io/bitnamicharts/redis \
       --namespace redis \
       --create-namespace \
       --set auth.enabled=false \
@@ -128,7 +128,7 @@ fi
 # 9. Install RabbitMQ
 log_info "Installing RabbitMQ..."
 if ! kubectl get namespace rabbitmq &> /dev/null; then
-    helm install rabbitmq bitnami/rabbitmq \
+    helm install rabbitmq oci://registry-1.docker.io/bitnamicharts/rabbitmq \
       --namespace rabbitmq \
       --create-namespace \
       --set auth.username=admin \
