@@ -1,0 +1,43 @@
+image:
+  tag: "PROD_SHA"
+
+imagePullSecrets:
+  - name: ghcr
+
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: content-worker-secrets
+        key: database-url
+  - name: REDIS_URL
+    value: "redis://redis-master.redis.svc.cluster.local:6379"
+  - name: RABBITMQ_URL
+    valueFrom:
+      secretKeyRef:
+        name: content-worker-secrets
+        key: rabbitmq-url
+  - name: MINIO_ENDPOINT
+    value: "minio.minio.svc.cluster.local:9000"
+  - name: MINIO_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: content-worker-secrets
+        key: minio-access-key
+  - name: MINIO_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: content-worker-secrets
+        key: minio-secret-key
+  - name: MINIO_SECURE
+    value: "true"
+  - name: LOG_LEVEL
+    value: "WARNING"
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi

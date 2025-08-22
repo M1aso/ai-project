@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: swaggerapi/swagger-ui
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+# Swagger UI configuration
+swaggerConfig:
+  urls:
+    - url: "/specs/auth.yaml"
+      name: "Auth API"
+    - url: "/specs/profile.yaml"
+      name: "Profile API"
+    - url: "/specs/content.yaml"
+      name: "Content API"
+    - url: "/specs/notifications.yaml"
+      name: "Notifications API"
+    - url: "/specs/chat.yaml"
+      name: "Chat API"
+    - url: "/specs/analytics.yaml"
+      name: "Analytics API"

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "swagger-ui.fullname" . }}-specs
+  labels:
+    app: {{ include "swagger-ui.fullname" . }}
+data:
+  auth.yaml: |
+{{ .Files.Get "../../libs/contracts/auth.yaml" | nindent 4 }}
+  profile.yaml: |
+{{ .Files.Get "../../libs/contracts/profile.yaml" | nindent 4 }}
+  content.yaml: |
+{{ .Files.Get "../../libs/contracts/content.yaml" | nindent 4 }}
+  notifications.yaml: |
+{{ .Files.Get "../../libs/contracts/notifications.yaml" | nindent 4 }}
+  chat.yaml: |
+{{ .Files.Get "../../libs/contracts/chat.yaml" | nindent 4 }}
+  analytics.yaml: |
+{{ .Files.Get "../../libs/contracts/analytics.yaml" | nindent 4 }}

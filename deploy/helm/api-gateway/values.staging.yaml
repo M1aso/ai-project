@@ -1,0 +1,8 @@
+ingress:
+  host: "api.staging.45.146.164.70.nip.io"
+
+jwtAuthn:
+  issuer: "https://api.staging.45.146.164.70.nip.io/api/auth/"
+  jwksUri: "https://api.staging.45.146.164.70.nip.io/api/auth/.well-known/jwks.json"
+  jwksHost: "api.staging.45.146.164.70.nip.io"
+  jwksPort: 443
