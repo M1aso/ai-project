@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "swagger-ui.fullname" . }}
+  labels:
+    app: {{ include "swagger-ui.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "swagger-ui.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "swagger-ui.fullname" . }}
+    spec:
+      containers:
+        - name: swagger-ui
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: URLS
+              value: {{ .Values.swaggerConfig.urls | toJson | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: specs
+              mountPath: /usr/share/nginx/html/specs
+              readOnly: true
+      volumes:
+        - name: specs
+          configMap:
+            name: {{ include "swagger-ui.fullname" . }}-specs

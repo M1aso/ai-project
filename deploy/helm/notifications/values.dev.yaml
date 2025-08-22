@@ -7,5 +7,19 @@ service:
 imagePullSecrets:
   - name: ghcr
 
+env:
+  - name: DATABASE_URL
+    value: "postgresql://postgres:postgres123@postgresql.postgresql.svc.cluster.local:5432/aiproject"
+  - name: REDIS_URL
+    value: "redis://redis-master.redis.svc.cluster.local:6379"
+  - name: RABBITMQ_URL
+    value: "amqp://admin:admin123@rabbitmq.rabbitmq.svc.cluster.local:5672"
+  - name: SMTP_HOST
+    value: "smtp.gmail.com"
+  - name: SMTP_PORT
+    value: "587"
+  - name: LOG_LEVEL
+    value: "DEBUG"
+
 ingress:
   enabled: false  # exposed only via api-gateway

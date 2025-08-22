@@ -1,5 +1,5 @@
 image:
-  tag: "DEV_SHA"  # overridden by CI via --set image.tag=${GITHUB_SHA}
+  tag: "STAGING_SHA"
 
 imagePullSecrets:
   - name: ghcr
@@ -20,4 +20,12 @@ env:
   - name: MINIO_SECURE
     value: "false"
   - name: LOG_LEVEL
-    value: "DEBUG"
+    value: "INFO"
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

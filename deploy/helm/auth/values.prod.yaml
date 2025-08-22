@@ -1,0 +1,41 @@
+image:
+  tag: "PROD_SHA"
+
+service:
+  port: 8000
+
+imagePullSecrets:
+  - name: ghcr
+
+ingress:
+  enabled: false  # exposed only via api-gateway
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60
+
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: auth-secrets
+        key: database-url
+  - name: REDIS_URL
+    value: "redis://redis-master.redis.svc.cluster.local:6379"
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: auth-secrets
+        key: jwt-secret
+  - name: LOG_LEVEL
+    value: "WARNING"

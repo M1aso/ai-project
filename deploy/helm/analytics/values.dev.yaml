@@ -7,5 +7,23 @@ service:
 imagePullSecrets:
   - name: ghcr
 
+env:
+  - name: DATABASE_URL
+    value: "postgresql://postgres:postgres123@postgresql.postgresql.svc.cluster.local:5432/aiproject"
+  - name: REDIS_URL
+    value: "redis://redis-master.redis.svc.cluster.local:6379"
+  - name: RABBITMQ_URL
+    value: "amqp://admin:admin123@rabbitmq.rabbitmq.svc.cluster.local:5672"
+  - name: MINIO_ENDPOINT
+    value: "minio.minio.svc.cluster.local:9000"
+  - name: MINIO_ACCESS_KEY
+    value: "admin"
+  - name: MINIO_SECRET_KEY
+    value: "admin123456"
+  - name: MINIO_SECURE
+    value: "false"
+  - name: LOG_LEVEL
+    value: "DEBUG"
+
 ingress:
   enabled: false  # exposed only via api-gateway
