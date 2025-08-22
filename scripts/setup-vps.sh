@@ -57,8 +57,8 @@ fi
 # 3. Install k3s
 log_info "Installing k3s..."
 if ! command -v kubectl &> /dev/null; then
-    curl -sfL https://get.k3s.io | sh -
-    sudo mkdir -p ~/.kube
+    curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+    mkdir -p ~/.kube
     sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     sudo chown $USER:$USER ~/.kube/config
     echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
