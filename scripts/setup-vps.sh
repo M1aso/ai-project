@@ -389,7 +389,7 @@ sudo chown $USER:$USER /opt/backups
 
 # 13. Create backup script
 log_info "Creating backup script..."
-cat <<'EOF' > /opt/backup-db.sh
+sudo tee /opt/backup-db.sh > /dev/null <<'EOF'
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p /opt/backups
@@ -398,7 +398,7 @@ find /opt/backups -name "db_backup_*.sql" -mtime +7 -delete
 echo "Database backup completed: db_backup_$DATE.sql"
 EOF
 
-chmod +x /opt/backup-db.sh
+sudo chmod +x /opt/backup-db.sh
 
 # Setup cron job for daily backups
 (crontab -l 2>/dev/null; echo "0 2 * * * /opt/backup-db.sh") | crontab -
