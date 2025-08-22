@@ -1,8 +1,8 @@
 ingress:
-  host: "api.45.146.164.70.nip.io"
+  host: "45.146.164.70.nip.io"
 
 jwtAuthn:
-  issuer: "https://auth.dev.example.com/"
-  jwksUri: "https://auth.dev.example.com/.well-known/jwks.json"
-  jwksHost: "auth.dev.example.com"
-  jwksPort: 443
+  issuer: "http://45.146.164.70.nip.io/api/auth/"
+  jwksUri: "http://45.146.164.70.nip.io/api/auth/.well-known/jwks.json"
+  jwksHost: "45.146.164.70.nip.io"
+  jwksPort: 80

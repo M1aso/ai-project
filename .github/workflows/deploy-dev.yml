@@ -1,0 +1,119 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Derive lowercase owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        run: |
+          services=("auth" "profile" "content" "content-worker" "notifications" "chat" "analytics")
+          for service in "${services[@]}"; do
+            if [ -f "services/$service/Dockerfile" ]; then
+              echo "Building $service..."
+              docker build -t "ghcr.io/${{ env.OWNER_LC }}/$service:${{ github.sha }}" "services/$service"
+              docker push "ghcr.io/${{ env.OWNER_LC }}/$service:${{ github.sha }}"
+              
+              # Also tag as 'dev' for easier reference
+              docker tag "ghcr.io/${{ env.OWNER_LC }}/$service:${{ github.sha }}" "ghcr.io/${{ env.OWNER_LC }}/$service:dev"
+              docker push "ghcr.io/${{ env.OWNER_LC }}/$service:dev"
+              
+              echo "✅ $service built and pushed"
+            fi
+          done
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Configure kubectl for VPS
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Create namespace and secrets
+        run: |
+          kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Create GHCR pull secret
+          kubectl -n dev delete secret ghcr-creds --ignore-not-found
+          kubectl -n dev create secret docker-registry ghcr-creds \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy API Gateway
+        run: |
+          helm upgrade --install api-gateway deploy/helm/api-gateway \
+            --namespace dev \
+            --create-namespace \
+            -f deploy/helm/api-gateway/values.dev.yaml \
+            --wait --timeout=300s
+
+      - name: Deploy Services
+        run: |
+          services=("auth" "profile" "content" "content-worker" "notifications" "chat" "analytics")
+          for service in "${services[@]}"; do
+            if [ -f "deploy/helm/$service/Chart.yaml" ]; then
+              echo "Deploying $service..."
+              VALUES_FILE="deploy/helm/$service/values.dev.yaml"
+              
+              helm upgrade --install "$service" "deploy/helm/$service" \
+                --namespace dev \
+                --create-namespace \
+                --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$service" \
+                --set "image.tag=${{ github.sha }}" \
+                --set "imagePullSecrets[0].name=ghcr-creds" \
+                $([ -f "$VALUES_FILE" ] && echo "-f $VALUES_FILE") \
+                --wait --timeout=300s
+              
+              echo "✅ $service deployed"
+            fi
+          done
+
+      - name: Verify Deployment
+        run: |
+          echo "📊 Deployment Status:"
+          kubectl -n dev get pods
+          
+          echo
+          echo "🌐 Services deployed to: http://45.146.164.70.nip.io"
+          echo "🔍 Test endpoints:"
+          echo "  - Auth: http://45.146.164.70.nip.io/api/auth/healthz"
+          echo "  - Profile: http://45.146.164.70.nip.io/api/profile/healthz"
+          
+      - name: Test endpoints
+        run: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Test main endpoints
+          curl -f http://45.146.164.70.nip.io/api/auth/healthz || echo "Auth not ready yet"
+          curl -f http://45.146.164.70.nip.io/api/profile/healthz || echo "Profile not ready yet"
