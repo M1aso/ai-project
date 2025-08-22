@@ -1,0 +1,35 @@
+image:
+  repository: "ghcr.io/m1aso/auth"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8000
+
+imagePullSecrets:
+  - name: ghcr-creds
+
+ingress:
+  enabled: false  # exposed only via api-gateway
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+env:
+  - name: DATABASE_URL
+    value: "sqlite:///app/data/auth.db"
+  - name: JWT_SECRET_KEY
+    value: "your-super-secret-jwt-key-change-this-in-production"
+  - name: ENVIRONMENT
+    value: "production"

@@ -1,0 +1,37 @@
+image:
+  repository: "ghcr.io/m1aso/profile"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8000
+
+imagePullSecrets:
+  - name: ghcr-creds
+
+env:
+  - name: MINIO_ENDPOINT
+    value: "minio:9000"  # You'll need to deploy MinIO or use external storage
+  - name: MINIO_BUCKET
+    value: "avatars"
+  - name: DATABASE_URL
+    value: "sqlite:///app/data/profile.db"
+  - name: ENVIRONMENT
+    value: "production"
+
+ingress:
+  enabled: false  # exposed only via api-gateway
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70

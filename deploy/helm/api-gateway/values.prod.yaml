@@ -1,0 +1,16 @@
+ingress:
+  host: "45.146.164.70.nip.io"
+
+jwtAuthn:
+  issuer: "http://45.146.164.70.nip.io/api/auth/"
+  jwksUri: "http://45.146.164.70.nip.io/api/auth/.well-known/jwks.json"
+  jwksHost: "45.146.164.70.nip.io"
+  jwksPort: 80
+
+routes:
+  auth:           { serviceName: auth,           servicePort: 8000 }
+  profile:        { serviceName: profile,        servicePort: 8000 }
+  content:        { serviceName: content,        servicePort: 8000 }
+  notifications:  { serviceName: notifications,  servicePort: 8000 }
+  chat:           { serviceName: chat,           servicePort: 8000 }
+  analytics:      { serviceName: analytics,      servicePort: 8000 }
