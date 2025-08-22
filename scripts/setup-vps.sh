@@ -57,15 +57,53 @@ fi
 # 3. Install k3s
 log_info "Installing k3s..."
 if ! command -v kubectl &> /dev/null; then
+    # Install k3s with proper kubeconfig permissions
     curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+    
+    # Wait for k3s to be ready
+    log_info "Waiting for k3s to be ready..."
+    sleep 10
+    sudo systemctl enable k3s
+    sudo systemctl start k3s
+    
+    # Wait for kubeconfig file to be created
+    timeout=60
+    while [ ! -f /etc/rancher/k3s/k3s.yaml ] && [ $timeout -gt 0 ]; do
+        sleep 2
+        timeout=$((timeout-2))
+    done
+    
+    if [ ! -f /etc/rancher/k3s/k3s.yaml ]; then
+        log_error "k3s kubeconfig file not created after waiting"
+        exit 1
+    fi
+    
+    # Set up kubectl configuration
     mkdir -p ~/.kube
     sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
     sudo chown $USER:$USER ~/.kube/config
+    
+    # Add kubectl to PATH (k3s installs it as k3s kubectl)
+    sudo ln -sf /usr/local/bin/k3s /usr/local/bin/kubectl
+    
+    # Set environment variable
     echo "export KUBECONFIG=~/.kube/config" >> ~/.bashrc
     export KUBECONFIG=~/.kube/config
+    
+    # Wait for k3s to be fully operational
+    log_info "Waiting for k3s cluster to be ready..."
+    kubectl wait --for=condition=Ready nodes --all --timeout=120s
+    
     log_info "k3s installed successfully"
 else
     log_info "kubectl already available"
+    # Ensure kubeconfig is properly set even if kubectl exists
+    if [ -f /etc/rancher/k3s/k3s.yaml ]; then
+        mkdir -p ~/.kube
+        sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+        sudo chown $USER:$USER ~/.kube/config
+        export KUBECONFIG=~/.kube/config
+    fi
 fi
 
 # 4. Install Helm
@@ -82,6 +120,31 @@ fi
 
 # 5. Install NGINX Ingress Controller
 log_info "Installing NGINX Ingress Controller..."
+
+# Verify kubectl is working before proceeding
+if ! kubectl cluster-info &> /dev/null; then
+    log_error "kubectl is not properly configured. Please check k3s installation."
+    log_info "Trying to fix kubeconfig permissions..."
+    
+    if [ -f /etc/rancher/k3s/k3s.yaml ]; then
+        sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+        mkdir -p ~/.kube
+        sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+        sudo chown $USER:$USER ~/.kube/config
+        export KUBECONFIG=~/.kube/config
+        
+        # Test again
+        if ! kubectl cluster-info &> /dev/null; then
+            log_error "Still cannot access Kubernetes cluster. Exiting."
+            exit 1
+        fi
+        log_info "Fixed kubeconfig permissions successfully"
+    else
+        log_error "k3s kubeconfig file not found. Please restart k3s installation."
+        exit 1
+    fi
+fi
+
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
 
 log_info "Waiting for NGINX Ingress Controller to be ready..."
