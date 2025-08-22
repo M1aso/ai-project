@@ -1,2 +1,7 @@
 image:
-  tag: dev
+  repository: "ghcr.io/m1aso/content-worker"
+  tag: "dev"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-creds

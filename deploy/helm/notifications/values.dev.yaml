@@ -1,11 +1,13 @@
 image:
-  tag: "DEV_SHA"  # overridden by CI via --set image.tag=${GITHUB_SHA}
+  repository: "ghcr.io/m1aso/notifications"
+  tag: "dev"
+  pullPolicy: IfNotPresent
 
 service:
   port: 8000
 
 imagePullSecrets:
-  - name: ghcr
+  - name: ghcr-creds
 
 ingress:
   enabled: false  # exposed only via api-gateway

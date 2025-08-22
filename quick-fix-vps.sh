@@ -5,8 +5,8 @@
 
 set -e
 
-echo "🔧 Quick Fix for VPS Deployment Issues"
-echo "======================================"
+echo "🔧 Quick Fix for DEV Environment Deployment"
+echo "==========================================="
 
 # Set up environment
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -59,7 +59,7 @@ SERVICES=("auth" "profile" "content" "notifications" "chat" "analytics")
 for service in "${SERVICES[@]}"; do
     if [ -f "services/$service/Dockerfile" ]; then
         echo "Building $service..."
-        docker build -t "ghcr.io/m1aso/$service:latest" "services/$service"
+        docker build -t "ghcr.io/m1aso/$service:dev" "services/$service"
         echo "✅ $service image built"
     else
         echo "⚠️  No Dockerfile found for $service"
@@ -75,7 +75,7 @@ if [ -f "deploy/helm/auth/Chart.yaml" ]; then
         --namespace "$NAMESPACE" \
         --create-namespace \
         --set image.repository="ghcr.io/m1aso/auth" \
-        --set image.tag="latest" \
+        --set image.tag="dev" \
         --set image.pullPolicy="Never" \
         --set imagePullSecrets=null \
         --wait --timeout=300s
@@ -89,7 +89,7 @@ for service in "profile" "content" "notifications" "chat" "analytics"; do
             --namespace "$NAMESPACE" \
             --create-namespace \
             --set image.repository="ghcr.io/m1aso/$service" \
-            --set image.tag="latest" \
+            --set image.tag="dev" \
             --set image.pullPolicy="Never" \
             --set imagePullSecrets=null \
             --wait --timeout=300s

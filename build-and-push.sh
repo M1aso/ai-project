@@ -5,7 +5,7 @@ set -e
 # Configuration
 REGISTRY="ghcr.io"
 OWNER="m1aso"  # lowercase as required by GHCR
-TAG="${1:-latest}"
+TAG="${1:-dev}"
 
 # Services to build
 SERVICES=("auth" "profile" "content" "content-worker" "notifications" "chat" "analytics")
