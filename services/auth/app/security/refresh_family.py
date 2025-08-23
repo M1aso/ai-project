@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from . import tokens
@@ -38,12 +38,12 @@ def rotate(token: str) -> RefreshToken:
     rt = _store.get(token)
     if not rt or rt.revoked_at:
         raise ValueError("invalid token")
-    rt.revoked_at = datetime.utcnow()
+    rt.revoked_at = datetime.now(timezone.utc)
     return issue_token(rt.user_id, rt.family, prev_id=token)
 
 
 def revoke_family(family: str) -> None:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for rt in _store.values():
         if rt.family == family:
             rt.revoked_at = now
