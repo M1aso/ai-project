@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from ..db import models
 from ..security import tokens
+from ..events import emit_user_registered, emit_password_reset
+from .email_service import email_service
 
 
 def register(db: Session, email: str, password: str) -> str:
@@ -28,6 +30,13 @@ def register(db: Session, email: str, password: str) -> str:
     )
     db.add(ev)
     db.commit()
+    
+    # Send verification email
+    email_service.send_verification_email(email, token)
+    
+    # Emit event for other services
+    emit_user_registered(email)
+    
     return token
 
 
@@ -46,6 +55,10 @@ def verify(db: Session, token: str) -> dict:
     )
     db.add(rt)
     db.commit()
+    
+    # Send welcome email
+    email_service.send_welcome_email(user.email)
+    
     return {"access_token": access, "refresh_token": refresh, "user_id": user.id}
 
 
@@ -82,6 +95,13 @@ def request_password_reset(db: Session, email: str) -> str:
     )
     db.add(pr)
     db.commit()
+    
+    # Send password reset email
+    email_service.send_password_reset_email(email, token)
+    
+    # Emit event
+    emit_password_reset(email)
+    
     return token
 
 
