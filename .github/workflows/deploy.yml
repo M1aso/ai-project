@@ -74,7 +74,14 @@ jobs:
         run: |
           set -euo pipefail
           # Deploy standalone Kubernetes manifests (they have their own namespace declarations)
-          kubectl apply -f deploy/k8s/
+          echo "Deploying Kubernetes manifests from deploy/k8s/..."
+          ls -la deploy/k8s/
+          kubectl apply -f deploy/k8s/ --validate=true
+          echo "✓ Kubernetes manifests deployed successfully"
+          
+          # Verify critical ingresses are deployed
+          echo "Verifying ingress deployment..."
+          kubectl get ingress -n "$NS" || echo "No ingresses found in namespace $NS"
 
       - name: Deploy api-gateway
         env:
