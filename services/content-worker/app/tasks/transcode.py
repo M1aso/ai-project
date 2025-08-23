@@ -6,7 +6,8 @@ from pathlib import Path
 import yaml
 from prometheus_client import Counter
 
-from clients.content_api import ContentAPI
+from app.clients.content_api import ContentAPI
+from app.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 retry_counter = Counter(
@@ -18,6 +19,7 @@ with open(PRESETS_PATH, "r", encoding="utf-8") as f:
     PRESETS = yaml.safe_load(f)
 
 
+@celery_app.task
 def transcode_video(
     asset_id: str, source_path: str, preset: str, *, client=None, max_retries: int = 3
 ):
