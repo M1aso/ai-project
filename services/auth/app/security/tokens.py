@@ -54,7 +54,8 @@ def create_refresh_token(
         "family": family,
         "iat": now,
         "exp": expires_at,
-        "type": "refresh"
+        "type": "refresh",
+        "jti": generate_token()  # Add unique JWT ID to ensure token uniqueness
     }
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return token, expires_at
