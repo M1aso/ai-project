@@ -4,7 +4,7 @@ metadata:
   name: root-ingress
   namespace: dev
   annotations:
-    nginx.ingress.kubernetes.io/permanent-redirect: "http://docs.45.146.164.70.nip.io"
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:
@@ -12,7 +12,7 @@ spec:
       http:
         paths:
           - path: /
-            pathType: Exact
+            pathType: Prefix
             backend:
               service:
                 name: api-gateway
