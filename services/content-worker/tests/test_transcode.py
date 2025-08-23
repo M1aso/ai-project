@@ -6,8 +6,9 @@ import pytest
 
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "app"))
-from tasks.transcode import transcode_video  # noqa: E402
+# Add the content-worker directory to Python path so relative imports work
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app.tasks.transcode import transcode_video  # noqa: E402
 
 
 class DummyClient:
