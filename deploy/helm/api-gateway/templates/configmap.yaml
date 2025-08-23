@@ -29,6 +29,7 @@ data:
                                 prefix_rewrite: "/"
 {{- end }}
                     http_filters:
+{{- if .Values.jwtAuthn.enabled }}
                       - name: envoy.filters.http.jwt_authn
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
@@ -44,8 +45,10 @@ data:
                           rules:
                             - match: { prefix: "/" }
                               requires: { provider_name: "default" }
+{{- end }}
                       - name: envoy.filters.http.router
       clusters:
+{{- if .Values.jwtAuthn.enabled }}
         - name: jwks_cluster
           type: STRICT_DNS
           connect_timeout: 2s
@@ -59,6 +62,7 @@ data:
                         socket_address:
                           address: "{{ .Values.jwtAuthn.jwksHost }}"
                           port_value: {{ .Values.jwtAuthn.jwksPort }}
+{{- end }}
 {{- range $name, $cfg := .Values.routes }}
         - name: "{{ $name }}_cluster"
           type: STRICT_DNS

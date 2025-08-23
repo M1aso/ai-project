@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM python:3.12-slim AS builder
-RUN pip install --prefix=/install --no-cache-dir fastapi uvicorn sqlalchemy
+RUN pip install --prefix=/install --no-cache-dir fastapi uvicorn sqlalchemy prometheus_client
 
 FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
