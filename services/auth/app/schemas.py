@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserRead(BaseModel):
@@ -10,8 +10,7 @@ class UserRead(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmailVerificationRead(BaseModel):
@@ -20,8 +19,7 @@ class EmailVerificationRead(BaseModel):
     expires_at: datetime
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PasswordResetRead(BaseModel):
@@ -30,8 +28,7 @@ class PasswordResetRead(BaseModel):
     expires_at: datetime
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RefreshTokenRead(BaseModel):
@@ -41,5 +38,4 @@ class RefreshTokenRead(BaseModel):
     expires_at: datetime
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

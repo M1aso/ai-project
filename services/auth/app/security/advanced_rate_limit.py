@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 from fastapi import HTTPException, Request
 import redis
@@ -52,7 +52,7 @@ class AdvancedRateLimiter:
                 pass
         else:
             # Simple memory cleanup for keys older than TTL
-            data['_expires'] = (datetime.utcnow() + timedelta(seconds=ttl)).isoformat()
+            data['_expires'] = (datetime.now(timezone.utc) + timedelta(seconds=ttl)).isoformat()
             self._memory_store[key] = data
     
     def _delete_key(self, key: str):
@@ -75,7 +75,7 @@ class AdvancedRateLimiter:
         
         # Check memory store expiration
         if not self.redis and '_expires' in data:
-            if datetime.utcnow() > datetime.fromisoformat(data['_expires']):
+            if datetime.now(timezone.utc) > datetime.fromisoformat(data['_expires']):
                 self._delete_key(key)
                 return True
         
@@ -96,7 +96,7 @@ class AdvancedRateLimiter:
             delay_index = min(attempts - max_attempts, len(delays) - 1)
             required_delay = delays[delay_index]
             
-            time_passed = (datetime.utcnow() - last_attempt).total_seconds()
+            time_passed = (datetime.now(timezone.utc) - last_attempt).total_seconds()
             if time_passed < required_delay:
                 remaining_minutes = int((required_delay - time_passed) / 60)
                 raise HTTPException(
@@ -119,7 +119,7 @@ class AdvancedRateLimiter:
         
         new_data = {
             "count": count,
-            "last_attempt": datetime.utcnow().isoformat()
+            "last_attempt": datetime.now(timezone.utc).isoformat()
         }
         
         # Expire after 24 hours
@@ -134,7 +134,7 @@ class AdvancedRateLimiter:
         """Generic rate limiting check."""
         key = f"rate_limit:{identifier}"
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         data = self._get_key_data(key)
         
         # Get request timestamps within the window

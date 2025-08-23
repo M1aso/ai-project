@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -18,7 +18,7 @@ class User(Base):
     is_active = Column(Boolean, nullable=False, default=False)
     blocked_until = Column(DateTime(timezone=True))
     created_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
 
@@ -31,7 +31,7 @@ class EmailVerification(Base):
     )
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
 
@@ -44,7 +44,7 @@ class PasswordReset(Base):
     )
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
 
@@ -58,7 +58,7 @@ class RefreshToken(Base):
     family = Column(String(36), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
     __table_args__ = (Index("ix_refresh_tokens_user_id_family", "user_id", "family"),)

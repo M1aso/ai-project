@@ -1,6 +1,6 @@
 import re
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, EmailStr, validator, Field
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from fastapi import HTTPException
 
 
@@ -9,7 +9,8 @@ class SecureEmailRegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     device_info: Optional[Dict[str, Any]] = None
     
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email_domain(cls, v):
         """Additional email validation."""
         email_str = str(v)
@@ -26,7 +27,8 @@ class SecureEmailRegisterRequest(BaseModel):
         
         return v
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password_strength(cls, v):
         """Validate password strength."""
         if len(v) < 8:
@@ -73,7 +75,8 @@ class SecureEmailRegisterRequest(BaseModel):
         
         return v
     
-    @validator('device_info')
+    @field_validator('device_info')
+    @classmethod
     def validate_device_info(cls, v):
         """Validate and sanitize device info."""
         if v is None:
@@ -107,7 +110,8 @@ class SecureEmailLoginRequest(BaseModel):
     remember_me: bool = False
     device_info: Optional[Dict[str, Any]] = None
     
-    @validator('device_info')
+    @field_validator('device_info')
+    @classmethod
     def validate_device_info(cls, v):
         """Validate and sanitize device info."""
         if v is None:
@@ -136,7 +140,8 @@ class SecureEmailLoginRequest(BaseModel):
 class SecurePhoneRequest(BaseModel):
     phone: str = Field(..., min_length=7, max_length=20)
     
-    @validator('phone')
+    @field_validator('phone')
+    @classmethod
     def validate_phone_format(cls, v):
         """Validate phone number format."""
         # Remove all non-digits except +
@@ -192,7 +197,8 @@ class SecurePhoneRequest(BaseModel):
 class EmailVerifyRequest(BaseModel):
     token: str = Field(..., min_length=32, max_length=256)
     
-    @validator('token')
+    @field_validator('token')
+    @classmethod
     def validate_token_format(cls, v):
         """Validate token format."""
         # Remove any whitespace
@@ -213,7 +219,8 @@ class PasswordResetConfirmRequest(BaseModel):
     token: str = Field(..., min_length=32, max_length=256)
     new_password: str = Field(..., min_length=8, max_length=128)
     
-    @validator('token')
+    @field_validator('token')
+    @classmethod
     def validate_token_format(cls, v):
         """Validate token format."""
         token = v.strip()
@@ -221,7 +228,8 @@ class PasswordResetConfirmRequest(BaseModel):
             raise ValueError('Invalid token format')
         return token
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_new_password_strength(cls, v):
         """Validate new password strength - same as registration."""
         if len(v) < 8:
@@ -265,7 +273,8 @@ class PasswordResetConfirmRequest(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=32, max_length=512)
     
-    @validator('refresh_token')
+    @field_validator('refresh_token')
+    @classmethod
     def validate_refresh_token_format(cls, v):
         """Validate refresh token format."""
         token = v.strip()

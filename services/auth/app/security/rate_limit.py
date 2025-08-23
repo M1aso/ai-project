@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 from fastapi import HTTPException
@@ -13,7 +13,7 @@ class WindowRateLimiter:
         self._history: Dict[str, List[datetime]] = {}
 
     def check(self, key: str) -> bool:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         items = self._history.get(key, [])
         items = [t for t in items if now - t < self.window]
         if len(items) >= self.limit:

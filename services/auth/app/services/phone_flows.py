@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 from fastapi import HTTPException
@@ -27,7 +27,7 @@ def _generate_code() -> str:
 def send_code(phone: str, ip: str) -> str:
     rate_limit.check_limits(phone, ip)
     code = _generate_code()
-    _codes[phone] = PhoneCode(code=code, sent_at=datetime.utcnow())
+    _codes[phone] = PhoneCode(code=code, sent_at=datetime.now(timezone.utc))
     return code
 
 
@@ -35,7 +35,7 @@ def verify_code(phone: str, code: str) -> None:
     entry = _codes.get(phone)
     if not entry:
         raise HTTPException(status_code=400, detail="code not requested")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if entry.locked_until and now < entry.locked_until:
         raise HTTPException(status_code=423, detail="phone locked")
     if code != entry.code:

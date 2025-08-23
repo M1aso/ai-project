@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 import redis
 
@@ -37,7 +37,7 @@ class SessionManager:
         if self.redis:
             return
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired_keys = []
         
         for key, data in self._memory_store.items():
@@ -57,8 +57,8 @@ class SessionManager:
         session_id = str(uuid.uuid4())
         session_data = {
             "user_id": user_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "last_activity": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_activity": datetime.now(timezone.utc).isoformat(),
             "device_info": device_info,
             "ip_address": ip_address,
             "is_active": True
@@ -80,7 +80,7 @@ class SessionManager:
         else:
             # Memory store fallback
             self._cleanup_memory_store()
-            session_data['_expires'] = (datetime.utcnow() + timedelta(seconds=session_ttl)).isoformat()
+            session_data['_expires'] = (datetime.now(timezone.utc) + timedelta(seconds=session_ttl)).isoformat()
             self._memory_store[f"session:{session_id}"] = session_data
             
             # Track user sessions in memory
@@ -88,7 +88,7 @@ class SessionManager:
             if user_sessions_key not in self._memory_store:
                 self._memory_store[user_sessions_key] = {
                     "sessions": [],
-                    "_expires": (datetime.utcnow() + timedelta(seconds=session_ttl)).isoformat()
+                    "_expires": (datetime.now(timezone.utc) + timedelta(seconds=session_ttl)).isoformat()
                 }
             self._memory_store[user_sessions_key]["sessions"].append(session_id)
         
@@ -113,7 +113,7 @@ class SessionManager:
                 # Check expiration for memory store
                 if '_expires' in session_data:
                     expires_at = datetime.fromisoformat(session_data['_expires'])
-                    if datetime.utcnow() > expires_at:
+                    if datetime.now(timezone.utc) > expires_at:
                         del self._memory_store[session_key]
                         return None
             
@@ -129,14 +129,14 @@ class SessionManager:
                 pass
             
             # Update last activity
-            session_data["last_activity"] = datetime.utcnow().isoformat()
+            session_data["last_activity"] = datetime.now(timezone.utc).isoformat()
             
             session_ttl = int(os.getenv("SESSION_TTL", 30 * 24 * 3600))
             
             if self.redis:
                 self.redis.setex(session_key, session_ttl, json.dumps(session_data))
             else:
-                session_data['_expires'] = (datetime.utcnow() + timedelta(seconds=session_ttl)).isoformat()
+                session_data['_expires'] = (datetime.now(timezone.utc) + timedelta(seconds=session_ttl)).isoformat()
                 self._memory_store[session_key] = session_data
             
             return session_data

@@ -1,7 +1,7 @@
 import secrets
 import os
 from typing import Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 from passlib.context import CryptContext
 
@@ -32,7 +32,7 @@ def verify_password(password: str, hashed: str) -> bool:
 
 def create_access_token(user_id: str, roles: list = None, expires_in: int = ACCESS_TOKEN_TTL) -> str:
     """Create JWT access token with proper claims."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     payload = {
         "sub": user_id,
         "iat": now,
@@ -47,7 +47,7 @@ def create_refresh_token(
     user_id: str, family: str, expires_in: int = REFRESH_TOKEN_TTL
 ) -> Tuple[str, datetime]:
     """Create JWT refresh token."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_at = now + timedelta(seconds=expires_in)
     payload = {
         "sub": user_id,
