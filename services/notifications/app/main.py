@@ -15,6 +15,10 @@ def health():
 def healthz():
     return {"status": "ok", "service": "notifications"}
 
+@app.get("/api/healthz")
+def api_healthz():
+    return {"status": "ok", "service": "notifications"}
+
 
 @app.get("/readyz")
 def readyz():

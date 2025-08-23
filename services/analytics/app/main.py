@@ -39,6 +39,10 @@ app.add_middleware(MetricsMiddleware)
 def healthz():
     return {"status": "ok", "service": "analytics"}
 
+@app.get("/api/analytics/healthz")
+def api_healthz():
+    return {"status": "ok", "service": "analytics"}
+
 
 @app.get("/readyz")
 def readyz():

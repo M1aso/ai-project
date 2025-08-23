@@ -12,6 +12,10 @@ app.include_router(email.router)
 def healthz():
     return {"status": "ok", "service": "auth"}
 
+@app.get("/api/auth/healthz")
+def api_healthz():
+    return {"status": "ok", "service": "auth"}
+
 
 @app.get("/readyz")
 def readyz():
