@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from uuid import uuid4
 
@@ -55,7 +55,7 @@ class Profile(Base):
     experience_id = Column(Integer, ForeignKey("experience_levels.id"), nullable=True)
     avatar_url = Column(String(255))
     updated_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
     experience = relationship("ExperienceLevel")
@@ -76,7 +76,7 @@ class SocialBinding(Base):
     )
     provider = Column(String(20), nullable=False)
     provider_id = Column(String(255))
-    linked_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    linked_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
 
 class ProfileHistory(Base):
@@ -90,7 +90,7 @@ class ProfileHistory(Base):
     old_value = Column(Text)
     new_value = Column(Text)
     changed_at = Column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     changed_by = Column(String(36))
 

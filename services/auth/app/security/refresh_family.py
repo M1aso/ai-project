@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
@@ -39,29 +39,9 @@ def rotate(token: str) -> RefreshToken:
     if not rt or rt.revoked_at:
         raise ValueError("invalid token")
     
-    # Create a new instance with revoked_at set
-    revoked_rt = RefreshToken(
-        token=rt.token,
-        user_id=rt.user_id,
-        family=rt.family,
-        prev_id=rt.prev_id,
-        revoked_at=datetime.now(timezone.utc),
-        expires_at=rt.expires_at
-    )
+    # Use dataclasses.replace to create a proper copy with revoked_at set
+    revoked_rt = replace(rt, revoked_at=datetime.now(timezone.utc))
     _store[token] = revoked_rt
-    
-    # Verify the assignment worked (debug)
-    stored_rt = _store.get(token)
-    if stored_rt and stored_rt.revoked_at is None:
-        # Force a new assignment to ensure it works
-        _store[token] = RefreshToken(
-            token=rt.token,
-            user_id=rt.user_id,
-            family=rt.family,
-            prev_id=rt.prev_id,
-            revoked_at=datetime.now(timezone.utc),
-            expires_at=rt.expires_at
-        )
     
     return issue_token(rt.user_id, rt.family, prev_id=token)
 
@@ -75,17 +55,10 @@ def revoke_family(family: str) -> None:
         if rt.family == family:
             tokens_to_update.append(token)
     
-    # Update each token
+    # Update each token using dataclasses.replace
     for token in tokens_to_update:
         rt = _store[token]
-        revoked_rt = RefreshToken(
-            token=rt.token,
-            user_id=rt.user_id,
-            family=rt.family,
-            prev_id=rt.prev_id,
-            revoked_at=now,
-            expires_at=rt.expires_at
-        )
+        revoked_rt = replace(rt, revoked_at=now)
         _store[token] = revoked_rt
 
 
