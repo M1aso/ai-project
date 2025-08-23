@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 from prometheus_client import Counter
 
-from clients.content_api import ContentAPI
+from app.clients.content_api import ContentAPI
 
 logger = logging.getLogger(__name__)
 retry_counter = Counter(
