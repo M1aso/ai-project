@@ -6,6 +6,11 @@ app = FastAPI(title="Notifications Service")
 app.include_router(notify.router)
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "notifications"}
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok", "service": "notifications"}
