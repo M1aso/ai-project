@@ -1,0 +1,92 @@
+openapi: 3.1.0
+info:
+  title: Analytics API
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+  /api/analytics/dashboard:
+    get:
+      summary: Get dashboard metrics
+      responses:
+        '200': { description: OK }
+
+  /api/analytics/ingest:
+    post:
+      summary: Ingest batch of events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingested:
+                    type: integer
+        '413':
+          description: Batch too large
+
+  /api/analytics/reports/dau:
+    get:
+      summary: Daily active users count
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dau:
+                    type: integer
+
+  /api/analytics/reports/events:
+    get:
+      summary: Export events
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, xlsx]
+          required: true
+      responses:
+        '200':
+          description: Export stream
+          content:
+            text/csv: {}
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {}
+
+components:
+  schemas:
+    Event:
+      type: object
+      properties:
+        ts:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        src:
+          type: string
+          nullable: true
+        payload:
+          type: object
+      required: [ts, user_id, type, payload]

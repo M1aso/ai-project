@@ -1,0 +1,207 @@
+openapi: 3.1.0
+info:
+  title: Content API
+  version: 0.2.0
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /api/courses:
+    get:
+      summary: List courses
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+      responses:
+        '201':
+          description: Created
+  /api/courses/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Get course
+      responses:
+        '200': { description: OK }
+    put:
+      summary: Update course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete course
+      responses:
+        '204': { description: No Content }
+  /api/courses/{courseId}/sections:
+    parameters:
+      - in: path
+        name: courseId
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: List sections
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create section
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Section'
+      responses:
+        '201': { description: Created }
+  /api/sections/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      summary: Update section
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Section'
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete section
+      responses:
+        '204': { description: No Content }
+  /api/sections/{sectionId}/materials:
+    parameters:
+      - in: path
+        name: sectionId
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: List materials
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create material
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Material'
+      responses:
+        '201': { description: Created }
+  /api/materials/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Get material
+      responses:
+        '200': { description: OK }
+    put:
+      summary: Update material
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Material'
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete material
+      responses:
+        '204': { description: No Content }
+  /api/materials/{id}/upload/presign:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      summary: Presign upload for material
+      responses:
+        '200': { description: OK }
+  /api/media-assets/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Get media asset
+      responses:
+        '200': { description: OK }
+  /api/tags:
+    get:
+      summary: List tags
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tag'
+      responses:
+        '201': { description: Created }
+components:
+  schemas:
+    Course:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [draft, review, published] }
+    Section:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        course_id: { type: string, format: uuid }
+        title: { type: string }
+        sequence: { type: integer }
+    Material:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        section_id: { type: string, format: uuid }
+        type: { type: string, enum: [video, document] }
+        title: { type: string }
+        status: { type: string, enum: [draft, review, published] }
+    MediaAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        material_id: { type: string, format: uuid }
+        url: { type: string }
+        status: { type: string, enum: [uploading, ready] }
+    Tag:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
