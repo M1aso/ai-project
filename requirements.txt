@@ -4,6 +4,9 @@ sqlalchemy
 pydantic
 prometheus_client
 email-validator
+pyjwt
+passlib[bcrypt]
+redis
 pytest
 httpx
 
