@@ -37,6 +37,18 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
+      - name: Configure kubeconfig from secret (optional)
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -n "${KUBE_CONFIG:-}" ]; then
+            mkdir -p "$HOME/.kube"
+            echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
+            echo "✓ Wrote kubeconfig from secret"
+          else
+            echo "↷ KUBE_CONFIG is empty; skipping. If you intended to use it, add it as an *Environment* secret on this repo."
+          fi
+
       - name: Create GHCR imagePullSecret (optional)
         env:
           NS:  ${{ inputs.environment || 'dev' }}
@@ -54,18 +66,6 @@ jobs:
             echo "✓ Created imagePullSecret 'ghcr' in namespace $NS"
           else
             echo "↷ GHCR_USERNAME/GHCR_TOKEN not provided; skipping imagePullSecret creation."
-          fi
-
-      - name: Configure kubeconfig from secret (optional)
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-        run: |
-          if [ -n "${KUBE_CONFIG:-}" ]; then
-            mkdir -p "$HOME/.kube"
-            echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
-            echo "✓ Wrote kubeconfig from secret"
-          else
-            echo "↷ KUBE_CONFIG is empty; skipping. If you intended to use it, add it as an *Environment* secret on this repo."
           fi
 
       - name: Deploy api-gateway
