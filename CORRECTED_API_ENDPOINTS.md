@@ -196,12 +196,48 @@ curl -X POST http://api.45.146.164.70.nip.io/api/auth/login \
   -d '{"email": "test@example.com", "password": "password123"}'
 ```
 
-## 🚀 Next Steps
+## 🚀 Next Steps - CRITICAL DEPLOYMENT REQUIRED
 
-1. **Deploy the changes**: Push these changes to trigger redeployment
-2. **Verify services**: Run the test scripts above to verify all endpoints work
-3. **Update client applications**: Update any frontend/mobile apps with the corrected endpoints
-4. **Monitor logs**: Check service logs for any remaining routing issues
+⚠️ **The configuration fixes have been made but need deployment to take effect!**
+
+### Immediate Action Required:
+
+1. **Deploy the fixed API Gateway**:
+   ```bash
+   helm upgrade --install api-gateway deploy/helm/api-gateway \
+     --namespace dev --create-namespace \
+     -f deploy/helm/api-gateway/values.dev.yaml
+   ```
+
+2. **Deploy all services**:
+   ```bash
+   for svc in auth profile content notifications chat analytics; do
+     helm upgrade --install "$svc" "deploy/helm/$svc" \
+       --namespace dev --create-namespace \
+       --set "image.repository=ghcr.io/m1aso/$svc" \
+       --set "image.tag=latest" \
+       -f "deploy/helm/$svc/values.dev.yaml"
+   done
+   ```
+
+3. **OR trigger auto-deployment**:
+   ```bash
+   git add .
+   git commit -m "fix: critical API gateway routing and service deployment"
+   git push origin dev
+   ```
+
+4. **Verify deployment**:
+   ```bash
+   ./scripts/verify-services.sh dev
+   ```
+
+### Why Services Are Currently Unavailable:
+- ✅ **Configuration fixed**: Envoy routing, clusters, and service implementations
+- ❌ **Not deployed**: Changes exist only in code, not in running services
+- ❌ **Services missing**: Individual services may not be deployed to Kubernetes
+
+See **SERVICE_DEPLOYMENT_FIX.md** for detailed deployment instructions.
 
 ## 📋 Service Status Checklist
 

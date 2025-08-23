@@ -22,29 +22,64 @@ data:
                         - name: default
                           domains: [ {{- if .Values.ingress.host }}"{{ .Values.ingress.host }}", {{- end }}"*" ]
                           routes:
-{{- range $name, $cfg := .Values.routes }}
-{{- if eq $name "content" }}
+                            # Specific routes first (order matters in Envoy!)
+                            - match: { prefix: "/api/content/healthz" }
+                              route:
+                                cluster: "content_cluster"
+                                prefix_rewrite: "/api/content/healthz"
                             - match: { prefix: "/api/content" }
                               route:
-                                cluster: "{{ $name }}_cluster"
+                                cluster: "content_cluster"
                                 prefix_rewrite: "/api/content"
-{{- else if eq $name "notifications" }}
+                            - match: { prefix: "/api/notifications/healthz" }
+                              route:
+                                cluster: "notifications_cluster"
+                                prefix_rewrite: "/api/healthz"
                             - match: { prefix: "/api/notifications" }
                               route:
-                                cluster: "{{ $name }}_cluster"
+                                cluster: "notifications_cluster"
                                 prefix_rewrite: "/api"
-{{- else if eq $name "chats" }}
                             - match: { prefix: "/api/chats" }
                               route:
                                 cluster: "chat_cluster"
                                 prefix_rewrite: "/api/chats"
-{{- else }}
-                            - match: { prefix: "/api/{{ $name }}" }
+                            - match: { prefix: "/api/auth/healthz" }
                               route:
-                                cluster: "{{ $name }}_cluster"
-                                prefix_rewrite: "/api/{{ $name }}"
-{{- end }}
-{{- end }}
+                                cluster: "auth_cluster"
+                                prefix_rewrite: "/api/auth/healthz"
+                            - match: { prefix: "/api/auth" }
+                              route:
+                                cluster: "auth_cluster"
+                                prefix_rewrite: "/api/auth"
+                            - match: { prefix: "/api/profile/healthz" }
+                              route:
+                                cluster: "profile_cluster"
+                                prefix_rewrite: "/api/profile/healthz"
+                            - match: { prefix: "/api/profile" }
+                              route:
+                                cluster: "profile_cluster"
+                                prefix_rewrite: "/api/profile"
+                            - match: { prefix: "/api/analytics/healthz" }
+                              route:
+                                cluster: "analytics_cluster"
+                                prefix_rewrite: "/api/analytics/healthz"
+                            - match: { prefix: "/api/analytics" }
+                              route:
+                                cluster: "analytics_cluster"
+                                prefix_rewrite: "/api/analytics"
+                            # Chat WebSocket route
+                            - match: { prefix: "/ws" }
+                              route:
+                                cluster: "chat_cluster"
+                                prefix_rewrite: "/ws"
+                                upgrade_configs:
+                                  - upgrade_type: websocket
+                            # Catch-all for root path
+                            - match: { prefix: "/" }
+                              direct_response:
+                                status: 200
+                                body:
+                                  inline_string: '{"status":"ok","message":"AI Project API Gateway","services":["auth","profile","content","notifications","chat","analytics"]}'
                     http_filters:
 {{- if .Values.jwtAuthn.enabled }}
                       - name: envoy.filters.http.jwt_authn
@@ -82,21 +117,85 @@ data:
                           address: "{{ .Values.jwtAuthn.jwksHost }}"
                           port_value: {{ .Values.jwtAuthn.jwksPort }}
 {{- end }}
-{{- range $name, $cfg := .Values.routes }}
-        - name: "{{ $name }}_cluster"
+        # Service clusters
+        - name: "auth_cluster"
           type: STRICT_DNS
           connect_timeout: 2s
           lb_policy: ROUND_ROBIN
           load_assignment:
-            cluster_name: "{{ $name }}_cluster"
+            cluster_name: "auth_cluster"
             endpoints:
               - lb_endpoints:
                   - endpoint:
                       address:
                         socket_address:
-                          address: "{{ $cfg.serviceName }}.{{ $.Release.Namespace }}.svc.cluster.local"
-                          port_value: {{ $cfg.servicePort }}
-{{- end }}
+                          address: "auth.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
+        - name: "profile_cluster"
+          type: STRICT_DNS
+          connect_timeout: 2s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: "profile_cluster"
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: "profile.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
+        - name: "content_cluster"
+          type: STRICT_DNS
+          connect_timeout: 2s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: "content_cluster"
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: "content.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
+        - name: "notifications_cluster"
+          type: STRICT_DNS
+          connect_timeout: 2s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: "notifications_cluster"
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: "notifications.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
+        - name: "chat_cluster"
+          type: STRICT_DNS
+          connect_timeout: 2s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: "chat_cluster"
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: "chat.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
+        - name: "analytics_cluster"
+          type: STRICT_DNS
+          connect_timeout: 2s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: "analytics_cluster"
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: "analytics.{{ $.Release.Namespace }}.svc.cluster.local"
+                          port_value: 8000
     admin:
       access_log_path: /tmp/admin_access.log
       address:
