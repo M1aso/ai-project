@@ -46,7 +46,7 @@ def verify(db: Session, token: str) -> dict:
     )
     db.add(rt)
     db.commit()
-    return {"access_token": access, "refresh_token": refresh}
+    return {"access_token": access, "refresh_token": refresh, "user_id": user.id}
 
 
 def login(db: Session, email: str, password: str, remember_me: bool = False) -> dict:
@@ -67,7 +67,7 @@ def login(db: Session, email: str, password: str, remember_me: bool = False) -> 
     )
     db.add(rt)
     db.commit()
-    return {"access_token": access, "refresh_token": refresh}
+    return {"access_token": access, "refresh_token": refresh, "user_id": user.id}
 
 
 def request_password_reset(db: Session, email: str) -> str:

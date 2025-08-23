@@ -1,0 +1,30 @@
+# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Security
+passlib[bcrypt]==1.7.4
+pyjwt==2.8.0
+
+# Validation
+pydantic[email]==2.5.0
+email-validator==2.1.0
+
+# Caching and Sessions
+redis==5.0.1
+
+# Monitoring
+prometheus_client==0.19.0
+
+# HTTP and Middleware
+starlette==0.27.0
+
+# Development dependencies (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2

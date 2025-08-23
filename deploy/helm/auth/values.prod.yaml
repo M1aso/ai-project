@@ -25,17 +25,71 @@ hpa:
   targetCPUUtilizationPercentage: 60
 
 env:
+  # Database Configuration
   - name: DATABASE_URL
     valueFrom:
       secretKeyRef:
         name: auth-secrets
         key: database-url
-  - name: REDIS_URL
-    value: "redis://redis-master.redis.svc.cluster.local:6379"
-  - name: JWT_SECRET
+  
+  # Redis Configuration (for rate limiting and sessions)
+  - name: REDIS_HOST
+    value: "redis-master.redis.svc.cluster.local"
+  - name: REDIS_PORT
+    value: "6379"
+  - name: REDIS_PASSWORD
     valueFrom:
       secretKeyRef:
         name: auth-secrets
-        key: jwt-secret
+        key: redis-password
+        optional: true
+  
+  # JWT Security Configuration
+  - name: JWT_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: auth-secrets
+        key: jwt-secret-key
+  - name: JWT_ALGORITHM
+    value: "HS256"
+  - name: ACCESS_TOKEN_TTL
+    value: "3600"
+  - name: REFRESH_TOKEN_TTL
+    value: "2592000"
+  
+  # Rate Limiting Configuration
+  - name: MAX_LOGIN_ATTEMPTS
+    value: "5"
+  - name: RATE_LIMIT_WINDOW
+    value: "3600"
+  
+  # Session Management
+  - name: SESSION_TTL
+    value: "2592000"
+  
+  # Security Settings
+  - name: BCRYPT_ROUNDS
+    value: "12"
+  
+  # CORS Configuration
+  - name: ALLOWED_ORIGINS
+    valueFrom:
+      secretKeyRef:
+        name: auth-secrets
+        key: allowed-origins
+  
+  # Application Settings
+  - name: PORT
+    value: "8000"
+  - name: DEBUG
+    value: "false"
   - name: LOG_LEVEL
     value: "WARNING"
+  - name: SQL_DEBUG
+    value: "false"
+  
+  # Database Pool Settings
+  - name: DB_POOL_SIZE
+    value: "20"
+  - name: DB_MAX_OVERFLOW
+    value: "40"

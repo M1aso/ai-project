@@ -1,11 +1,35 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .metrics import MetricsMiddleware, metrics
 from .routers import email
+from .routers import secure_auth
+from .security.middleware import SecurityHeadersMiddleware
 
-app = FastAPI(title="Auth Service")
+app = FastAPI(
+    title="Auth Service",
+    description="Secure Authentication Service with JWT and Session Management",
+    version="1.0.0"
+)
+
+# Add security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add CORS middleware (configure for your frontend domains)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8080"],  # Configure for your frontend
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
+# Add metrics middleware
 app.add_middleware(MetricsMiddleware)
-app.include_router(email.router)
+
+# Include routers
+app.include_router(email.router)  # Keep existing router for backward compatibility
+app.include_router(secure_auth.router)  # New secure router
 
 
 @app.get("/healthz")
