@@ -68,6 +68,14 @@ jobs:
             echo "↷ GHCR_USERNAME/GHCR_TOKEN not provided; skipping imagePullSecret creation."
           fi
 
+      - name: Deploy Kubernetes manifests
+        env:
+          NS: ${{ inputs.environment || 'dev' }}
+        run: |
+          set -euo pipefail
+          # Deploy standalone Kubernetes manifests (they have their own namespace declarations)
+          kubectl apply -f deploy/k8s/
+
       - name: Deploy api-gateway
         env:
           ENV: ${{ inputs.environment || 'dev' }}
