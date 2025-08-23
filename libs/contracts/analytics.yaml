@@ -2,6 +2,9 @@ openapi: 3.1.0
 info:
   title: Analytics API
   version: 0.1.0
+servers:
+  - url: http://api.45.146.164.70.nip.io
+    description: Development server
 paths:
   /healthz:
     get:
