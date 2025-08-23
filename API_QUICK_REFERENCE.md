@@ -4,12 +4,12 @@
 
 | Service | Port | Technology | Base URL | Primary Function |
 |---------|------|------------|----------|------------------|
-| Auth | 8001 | Python FastAPI | `/api/auth` | Authentication & authorization |
-| Chat | 8002 | Node.js TypeScript | `/ws`, `/api/chats` | Real-time messaging |
-| Content | 8003 | Go | `/api` | Course & content management |
-| Profile | 8004 | Python FastAPI | `/api/profile` | User profile management |
-| Notifications | 8005 | Python FastAPI | `/api` | Multi-channel notifications |
-| Analytics | 8006 | Python FastAPI | `/api/analytics` | Event tracking & reporting |
+| Auth | 8000 | Python FastAPI | `/api/auth` | Authentication & authorization |
+| Chat | 8000 | Node.js TypeScript | `/ws`, `/api/chats` | Real-time messaging |
+| Content | 8000 | Go | `/api/content` | Course & content management |
+| Profile | 8000 | Python FastAPI | `/api/profile` | User profile management |
+| Notifications | 8000 | Python FastAPI | `/api/notifications` | Multi-channel notifications |
+| Analytics | 8000 | Python FastAPI | `/api/analytics` | Event tracking & reporting |
 | Content Worker | - | Python | Background | Content processing |
 
 ## Authentication Flow
@@ -33,10 +33,11 @@
 - `POST /api/profile/avatar/presign` - Upload avatar
 
 ### Content Service
-- `GET /api/courses` - List courses
-- `POST /api/courses` - Create course
-- `GET /api/courses/{id}` - Get course details
-- `POST /api/materials/{id}/upload/presign` - Upload content
+- `GET /api/content/healthz` - Health check
+- `GET /api/content/courses` - List courses
+- `POST /api/content/courses` - Create course
+- `GET /api/content/courses/{id}` - Get course details
+- `POST /api/content/materials/{id}/upload/presign` - Upload content
 
 ### Chat Service
 - `GET /ws?token=<token>&roomId=<id>` - WebSocket connection
@@ -44,9 +45,10 @@
 - `GET /api/chats/search` - Search chats
 
 ### Notifications Service
-- `POST /api/notify/send` - Send notification
-- `GET /api/subscriptions` - Get user preferences
-- `PUT /api/subscriptions` - Update preferences
+- `GET /api/notifications/healthz` - Health check
+- `POST /api/notifications/notify/send` - Send notification
+- `GET /api/notifications/subscriptions` - Get user preferences
+- `PUT /api/notifications/subscriptions` - Update preferences
 
 ### Analytics Service
 - `POST /api/analytics/ingest` - Send events

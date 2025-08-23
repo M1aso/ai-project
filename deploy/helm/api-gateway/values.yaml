@@ -25,4 +25,5 @@ routes:
   content:        { serviceName: content,        servicePort: 8000 }
   notifications:  { serviceName: notifications,  servicePort: 8000 }
   chat:           { serviceName: chat,           servicePort: 8000 }
+  chats:          { serviceName: chat,           servicePort: 8000 }
   analytics:      { serviceName: analytics,      servicePort: 8000 }

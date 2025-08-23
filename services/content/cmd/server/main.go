@@ -16,10 +16,25 @@ func main() {
 		_, _ = w.Write([]byte(`{"status":"ok","service":"content"}`))
 	})
 
+	// Health check endpoint (direct access)
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok","service":"content"}`))
+	})
+
 	r.Route("/api/content", func(api chi.Router) {
-		api.Get("/courses", func(w http.ResponseWriter, r *http.Request) {
+		// Health check endpoint (through API path)
+		api.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("[]"))
+			_, _ = w.Write([]byte(`{"status":"ok","service":"content"}`))
+		})
+
+		api.Get("/courses", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"courses":[],"status":"ok"}`))
 		})
 	})
 

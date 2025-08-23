@@ -23,10 +23,27 @@ data:
                           domains: [ {{- if .Values.ingress.host }}"{{ .Values.ingress.host }}", {{- end }}"*" ]
                           routes:
 {{- range $name, $cfg := .Values.routes }}
+{{- if eq $name "content" }}
+                            - match: { prefix: "/api/content" }
+                              route:
+                                cluster: "{{ $name }}_cluster"
+                                prefix_rewrite: "/api/content"
+{{- else if eq $name "notifications" }}
+                            - match: { prefix: "/api/notifications" }
+                              route:
+                                cluster: "{{ $name }}_cluster"
+                                prefix_rewrite: "/api"
+{{- else if eq $name "chats" }}
+                            - match: { prefix: "/api/chats" }
+                              route:
+                                cluster: "chat_cluster"
+                                prefix_rewrite: "/api/chats"
+{{- else }}
                             - match: { prefix: "/api/{{ $name }}" }
                               route:
                                 cluster: "{{ $name }}_cluster"
-                                prefix_rewrite: "/"
+                                prefix_rewrite: "/api/{{ $name }}"
+{{- end }}
 {{- end }}
                     http_filters:
 {{- if .Values.jwtAuthn.enabled }}

@@ -87,11 +87,16 @@ After deployment completes (~3-5 minutes), access your services:
 curl http://api.45.146.164.70.nip.io/api/auth/healthz
 curl http://api.45.146.164.70.nip.io/api/profile/healthz
 curl http://api.45.146.164.70.nip.io/api/content/healthz
+curl http://api.45.146.164.70.nip.io/api/notifications/healthz
+curl http://api.45.146.164.70.nip.io/api/analytics/healthz
 
 # Test authentication (example)
 curl -X POST http://api.45.146.164.70.nip.io/api/auth/phone/send-code \
   -H "Content-Type: application/json" \
   -d '{"phone": "+79001234567"}'
+
+# Test content service
+curl http://api.45.146.164.70.nip.io/api/content/courses
 ```
 
 ## 🔄 Development Workflow
