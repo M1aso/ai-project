@@ -21,6 +21,16 @@ data:
                       virtual_hosts:
                         - name: default
                           domains: [ {{- if .Values.ingress.host }}"{{ .Values.ingress.host }}", {{- end }}"*" ]
+                          cors:
+                            allow_origin_string_match:
+                              - prefix: "http://docs.45.146.164.70.nip.io"
+                              - prefix: "https://docs.45.146.164.70.nip.io"
+                              - exact: "*"
+                            allow_methods: "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+                            allow_headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Accept,Origin,Referer"
+                            expose_headers: "Content-Length,Content-Range,x-envoy-upstream-service-time"
+                            max_age: "86400"
+                            allow_credentials: true
                           routes:
                             # Specific routes first (order matters in Envoy!)
                             - match: { prefix: "/api/content/healthz" }
@@ -81,6 +91,10 @@ data:
                                 body:
                                   inline_string: '{"status":"ok","message":"AI Project API Gateway","services":["auth","profile","content","notifications","chat","analytics"]}'
                     http_filters:
+                      # CORS filter for Swagger UI support
+                      - name: envoy.filters.http.cors
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
 {{- if .Values.jwtAuthn.enabled }}
                       - name: envoy.filters.http.jwt_authn
                         typed_config:

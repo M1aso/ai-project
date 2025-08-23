@@ -6,14 +6,14 @@ servers:
   - url: http://api.45.146.164.70.nip.io
     description: Development server
 paths:
-  /healthz:
+  /api/notifications/healthz:
     get:
       summary: Health check
       responses:
         '200':
           description: OK
 
-  /api/notify/send:
+  /api/notifications/send:
     post:
       summary: Queue a notification for delivery
       requestBody:
@@ -38,7 +38,7 @@ paths:
       responses:
         '202': { description: Queued }
 
-  /api/notify/preview:
+  /api/notifications/preview:
     post:
       summary: Render a notification without sending
       requestBody:
@@ -59,7 +59,7 @@ paths:
       responses:
         '200': { description: Rendered }
 
-  /api/subscriptions:
+  /api/notifications/subscriptions:
     get:
       summary: Get current user notification subscriptions
       responses:

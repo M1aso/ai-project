@@ -6,13 +6,13 @@ servers:
   - url: http://api.45.146.164.70.nip.io
     description: Development server
 paths:
-  /healthz:
+  /api/content/healthz:
     get:
       summary: Health check
       responses:
         '200':
           description: OK
-  /api/courses:
+  /api/content/courses:
     get:
       summary: List courses
       responses:
@@ -29,7 +29,7 @@ paths:
       responses:
         '201':
           description: Created
-  /api/courses/{id}:
+  /api/content/courses/{id}:
     parameters:
       - in: path
         name: id
@@ -73,7 +73,7 @@ paths:
               $ref: '#/components/schemas/Section'
       responses:
         '201': { description: Created }
-  /api/sections/{id}:
+  /api/content/sections/{id}:
     parameters:
       - in: path
         name: id
@@ -93,7 +93,7 @@ paths:
       summary: Delete section
       responses:
         '204': { description: No Content }
-  /api/sections/{sectionId}/materials:
+  /api/content/sections/{sectionId}/materials:
     parameters:
       - in: path
         name: sectionId
@@ -113,7 +113,7 @@ paths:
               $ref: '#/components/schemas/Material'
       responses:
         '201': { description: Created }
-  /api/materials/{id}:
+  /api/content/materials/{id}:
     parameters:
       - in: path
         name: id
@@ -137,7 +137,7 @@ paths:
       summary: Delete material
       responses:
         '204': { description: No Content }
-  /api/materials/{id}/upload/presign:
+  /api/content/materials/{id}/upload/presign:
     parameters:
       - in: path
         name: id
@@ -147,7 +147,7 @@ paths:
       summary: Presign upload for material
       responses:
         '200': { description: OK }
-  /api/media-assets/{id}:
+  /api/content/media-assets/{id}:
     parameters:
       - in: path
         name: id
@@ -157,7 +157,7 @@ paths:
       summary: Get media asset
       responses:
         '200': { description: OK }
-  /api/tags:
+  /api/content/tags:
     get:
       summary: List tags
       responses:

@@ -6,7 +6,7 @@ servers:
   - url: http://api.45.146.164.70.nip.io
     description: Development server
 paths:
-  /healthz:
+  /api/analytics/healthz:
     get:
       summary: Health check
       responses:
