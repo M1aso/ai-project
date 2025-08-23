@@ -2,7 +2,8 @@ ingress:
   host: "api.45.146.164.70.nip.io"
 
 jwtAuthn:
-  issuer: "https://auth.dev.example.com/"
-  jwksUri: "https://auth.dev.example.com/.well-known/jwks.json"
-  jwksHost: "auth.dev.example.com"
-  jwksPort: 443
+  enabled: false  # Disable JWT authentication until auth service provides JWKS
+  issuer: "http://auth.dev.svc.cluster.local:8000/"
+  jwksUri: "http://auth.dev.svc.cluster.local:8000/.well-known/jwks.json"
+  jwksHost: "auth.dev.svc.cluster.local"
+  jwksPort: 8000
