@@ -10,9 +10,9 @@ class RefreshToken:
     token: str
     user_id: str
     family: str
-    prev_id: Optional[str]
-    revoked_at: Optional[datetime]
     expires_at: datetime
+    prev_id: Optional[str] = None
+    revoked_at: Optional[datetime] = None
 
 
 _store: Dict[str, RefreshToken] = {}
