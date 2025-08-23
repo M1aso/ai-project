@@ -38,15 +38,42 @@ def rotate(token: str) -> RefreshToken:
     rt = _store.get(token)
     if not rt or rt.revoked_at:
         raise ValueError("invalid token")
-    rt.revoked_at = datetime.now(timezone.utc)
+    
+    # Create a new instance with revoked_at set
+    revoked_rt = RefreshToken(
+        token=rt.token,
+        user_id=rt.user_id,
+        family=rt.family,
+        prev_id=rt.prev_id,
+        revoked_at=datetime.now(timezone.utc),
+        expires_at=rt.expires_at
+    )
+    _store[token] = revoked_rt
+    
     return issue_token(rt.user_id, rt.family, prev_id=token)
 
 
 def revoke_family(family: str) -> None:
     now = datetime.now(timezone.utc)
-    for rt in _store.values():
+    tokens_to_update = []
+    
+    # Find tokens to revoke
+    for token, rt in _store.items():
         if rt.family == family:
-            rt.revoked_at = now
+            tokens_to_update.append(token)
+    
+    # Update each token
+    for token in tokens_to_update:
+        rt = _store[token]
+        revoked_rt = RefreshToken(
+            token=rt.token,
+            user_id=rt.user_id,
+            family=rt.family,
+            prev_id=rt.prev_id,
+            revoked_at=now,
+            expires_at=rt.expires_at
+        )
+        _store[token] = revoked_rt
 
 
 def reset() -> None:
