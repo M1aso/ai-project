@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
@@ -46,13 +46,13 @@ def test_ingest_and_limit():
 
     events = [
         {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
             "user_id": "u1",
             "type": "click",
             "payload": {"a": 1},
         },
         {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
             "user_id": "u2",
             "type": "view",
             "payload": {"b": 2},

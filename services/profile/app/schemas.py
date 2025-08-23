@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class ProfileBase(BaseModel):
@@ -17,7 +17,8 @@ class ProfileBase(BaseModel):
     experience_id: Optional[int] = None
     avatar_url: Optional[str] = None
 
-    @validator("gender")
+    @field_validator("gender")
+    @classmethod
     def validate_gender(cls, v):
         if v is not None and v not in {"male", "female", "other"}:
             raise ValueError("invalid gender")
@@ -27,16 +28,14 @@ class ProfileBase(BaseModel):
 class ProfileUpdate(ProfileBase):
     first_name: Optional[str] = Field(None, max_length=100)
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProfileRead(ProfileBase):
     user_id: UUID
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExperienceLevelBase(BaseModel):
@@ -51,8 +50,7 @@ class ExperienceLevelCreate(ExperienceLevelBase):
 class ExperienceLevelRead(ExperienceLevelBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AvatarPresignRequest(BaseModel):

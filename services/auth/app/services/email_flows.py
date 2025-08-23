@@ -33,7 +33,7 @@ def register(db: Session, email: str, password: str) -> str:
 
 def verify(db: Session, token: str) -> dict:
     ev = db.query(models.EmailVerification).filter_by(token=token).first()
-    if not ev or ev.expires_at < datetime.now(timezone.utc):
+    if not ev or ev.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Invalid token")
     user = db.query(models.User).filter_by(id=ev.user_id).first()
     user.is_active = True
@@ -87,7 +87,7 @@ def request_password_reset(db: Session, email: str) -> str:
 
 def confirm_password_reset(db: Session, token: str, new_password: str) -> None:
     pr = db.query(models.PasswordReset).filter_by(token=token).first()
-    if not pr or pr.expires_at < datetime.now(timezone.utc):
+    if not pr or pr.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Invalid token")
     user = db.query(models.User).filter_by(id=pr.user_id).first()
     user.password_hash = tokens.hash_password(new_password)

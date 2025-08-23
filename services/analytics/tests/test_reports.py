@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -39,7 +39,7 @@ def setup_app():
 
 def seed_events(SessionLocal):
     db = SessionLocal()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     yesterday = now - timedelta(days=1)
     db.add_all(
         [

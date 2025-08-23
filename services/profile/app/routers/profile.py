@@ -34,7 +34,7 @@ def update_profile(
 ):
     try:
         return profile_service.update_profile(
-            db, current["sub"], payload.dict(exclude_unset=True), current["sub"]
+            db, current["sub"], payload.model_dump(exclude_unset=True), current["sub"]
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

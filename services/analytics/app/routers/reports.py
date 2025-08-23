@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/analytics/reports", tags=["reports"])
 
 @router.get("/dau")
 def daily_active_users(db: Session = Depends(get_db)):
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     start = datetime.combine(today, datetime.min.time())
     end = start + timedelta(days=1)
     count = (
@@ -28,7 +28,7 @@ def daily_active_users(db: Session = Depends(get_db)):
 
 @router.get("/events")
 def export_events(
-    format: str = Query(..., regex="^(csv|xlsx)$"), db: Session = Depends(get_db)
+    format: str = Query(..., pattern="^(csv|xlsx)$"), db: Session = Depends(get_db)
 ):
     events = db.query(Event).order_by(Event.id).all()
     if format == "csv":

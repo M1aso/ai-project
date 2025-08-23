@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -33,10 +33,10 @@ def update_profile(
                     old_value=None if old is None else str(old),
                     new_value=None if value is None else str(value),
                     changed_by=actor_id,
-                    changed_at=datetime.utcnow(),
+                    changed_at=datetime.now(timezone.utc),
                 )
             )
-    profile.updated_at = datetime.utcnow()
+    profile.updated_at = datetime.now(timezone.utc)
     for change in changes:
         db.add(change)
     db.commit()

@@ -1,7 +1,7 @@
 import os
 import sys
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -66,13 +66,13 @@ def test_unique_tokens(db):
     db.commit()
 
     ev1 = models.EmailVerification(
-        token="tok", user_id=user.id, expires_at=datetime.utcnow() + timedelta(hours=1)
+        token="tok", user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
     db.add(ev1)
     db.commit()
     db.expunge(ev1)
     ev2 = models.EmailVerification(
-        token="tok", user_id=user.id, expires_at=datetime.utcnow() + timedelta(hours=1)
+        token="tok", user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
     db.add(ev2)
     with pytest.raises(IntegrityError):
@@ -80,13 +80,13 @@ def test_unique_tokens(db):
     db.rollback()
 
     pr1 = models.PasswordReset(
-        token="rtok", user_id=user.id, expires_at=datetime.utcnow() + timedelta(hours=1)
+        token="rtok", user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
     db.add(pr1)
     db.commit()
     db.expunge(pr1)
     pr2 = models.PasswordReset(
-        token="rtok", user_id=user.id, expires_at=datetime.utcnow() + timedelta(hours=1)
+        token="rtok", user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
     )
     db.add(pr2)
 

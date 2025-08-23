@@ -50,6 +50,19 @@ def rotate(token: str) -> RefreshToken:
     )
     _store[token] = revoked_rt
     
+    # Verify the assignment worked (debug)
+    stored_rt = _store.get(token)
+    if stored_rt and stored_rt.revoked_at is None:
+        # Force a new assignment to ensure it works
+        _store[token] = RefreshToken(
+            token=rt.token,
+            user_id=rt.user_id,
+            family=rt.family,
+            prev_id=rt.prev_id,
+            revoked_at=datetime.now(timezone.utc),
+            expires_at=rt.expires_at
+        )
+    
     return issue_token(rt.user_id, rt.family, prev_id=token)
 
 
