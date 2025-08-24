@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db.models import ExperienceLevel, get_db
+from ..db.database import get_db
+from ..db.models import ExperienceLevel
 from ..schemas import ExperienceLevelCreate, ExperienceLevelRead
 
 router = APIRouter(prefix="/api/admin/experience-levels", tags=["experience"])

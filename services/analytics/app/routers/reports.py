@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from openpyxl import Workbook
 
-from ..db.models import Event, get_db
+from ..db.database import get_db
+from ..db.models import Event
 
 router = APIRouter(prefix="/api/analytics/reports", tags=["reports"])
 

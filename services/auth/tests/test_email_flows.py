@@ -19,7 +19,7 @@ from services.auth.app.routers import email as email_router
 def client():
     cfg = config.Config("services/auth/app/db/migrations/alembic.ini")
     cfg.set_main_option("script_location", "services/auth/app/db/migrations")
-    db_url = "sqlite:///./test_auth.db"
+    db_url = "postgresql://postgres:postgres@localhost:5432/test_aiproject"
     cfg.set_main_option("sqlalchemy.url", db_url)
     command.upgrade(cfg, "head")
     with TestClient(app) as c:

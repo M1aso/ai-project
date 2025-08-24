@@ -1,21 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from ..services import email_flows
-
-DATABASE_URL = "sqlite:///./test_auth.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from ..db.database import get_db
 
 
 router = APIRouter(prefix="/api/auth")

@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import os
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -11,18 +10,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./profile.db")
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=(
-        {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-    ),
-)
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -95,12 +84,4 @@ class ProfileHistory(Base):
     changed_by = Column(String(36))
 
 
-# Dependency
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

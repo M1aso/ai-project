@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db.models import get_db
+from ..db.database import get_db
 from ..schemas import ProfileRead, ProfileUpdate
 from ..services import profile_service
 

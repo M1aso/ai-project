@@ -10,13 +10,14 @@ from sqlalchemy.pool import StaticPool
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
-from services.analytics.app.db.models import Base, Event, get_db
+from services.analytics.app.db.database import get_db
+from services.analytics.app.db.models import Base, Event
 from services.analytics.app.routers.reports import router as reports_router
 
 
 def setup_app():
     engine = create_engine(
-        "sqlite:///:memory:",
+        "postgresql://postgres:postgres@localhost:5432/test_aiproject",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )

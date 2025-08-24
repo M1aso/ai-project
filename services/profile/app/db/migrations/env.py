@@ -20,7 +20,7 @@ if config.config_file_name is not None:
 
 if not config.get_main_option("sqlalchemy.url"):
     config.set_main_option(
-        "sqlalchemy.url", os.getenv("DATABASE_URL", "sqlite:///./profile.db")
+        "sqlalchemy.url", os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/aiproject")
     )
 
 target_metadata = models.Base.metadata

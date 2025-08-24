@@ -19,7 +19,7 @@ from services.auth.app.db import models
 def engine():
     cfg = config.Config("services/auth/app/db/migrations/alembic.ini")
     cfg.set_main_option("script_location", "services/auth/app/db/migrations")
-    db_path = "sqlite:///./test_auth.db"
+    db_path = "postgresql://postgres:postgres@localhost:5432/test_aiproject"
     cfg.set_main_option("sqlalchemy.url", db_path)
     command.upgrade(cfg, "head")
     eng = create_engine(db_path)

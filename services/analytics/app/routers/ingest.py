@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ..db.models import Event, get_db
+from ..db.database import get_db
+from ..db.models import Event
 
 router = APIRouter(prefix="/api/analytics", tags=["ingest"])
 

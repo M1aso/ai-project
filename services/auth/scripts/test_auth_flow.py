@@ -115,7 +115,7 @@ class AuthTester:
             from services.auth.app.db.models import EmailVerification
             
             # Use test database
-            engine = create_engine("sqlite:///./auth.db")
+            engine = create_engine("postgresql://postgres:postgres@localhost:5432/aiproject")
             SessionLocal = sessionmaker(bind=engine)
             
             with SessionLocal() as db:

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .db.database import reset_connection
 from .metrics import MetricsMiddleware, metrics
 from .routers import email
 from .routers import secure_auth
@@ -30,6 +31,12 @@ app.add_middleware(MetricsMiddleware)
 # Include routers
 app.include_router(email.router)  # Keep existing router for backward compatibility
 app.include_router(secure_auth.router)  # New secure router
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Reset database connection on startup to ensure fresh connection with env vars."""
+    reset_connection()
 
 
 @app.get("/healthz")

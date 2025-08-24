@@ -47,7 +47,7 @@ This document outlines the security improvements implemented in the authenticati
 
 1. **Python 3.12+**
 2. **Redis server** (for rate limiting and sessions)
-3. **PostgreSQL** (recommended) or SQLite (development)
+3. **PostgreSQL** (required)
 
 ### Installation
 

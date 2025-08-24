@@ -9,7 +9,14 @@ from prometheus_client import (
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .db.database import reset_connection
+from .routers import ingest, reports
+
 app = FastAPI(title="Analytics Service")
+
+# Include routers
+app.include_router(ingest.router)
+app.include_router(reports.router)
 
 REQUEST_COUNT = Counter(
     "analytics_request_total",
@@ -33,6 +40,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(MetricsMiddleware)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Reset database connection on startup to ensure fresh connection with env vars."""
+    reset_connection()
 
 
 @app.get("/healthz")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db.models import get_db
+from ..db.database import get_db
 from ..schemas import AvatarPresignRequest, AvatarPresignResponse
 from ..services.profile_service import get_profile
 from ..storage.minio_client import default_client
