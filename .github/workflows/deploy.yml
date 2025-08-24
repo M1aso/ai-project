@@ -8,10 +8,11 @@ on:
         required: true
         options: [dev, staging, prod]
       service:
-        description: "Service to deploy (leave empty for all services)"
+        description: "Service to deploy"
         type: choice
         required: false
-        options: ["", auth, profile, content, notifications, chat, analytics, content-worker, api-gateway]
+        default: "all"
+        options: [all, auth, profile, content, notifications, chat, analytics, content-worker, api-gateway]
   push:
     tags:
       - "release-*"
@@ -104,7 +105,7 @@ jobs:
           set -euo pipefail
           
           # Determine which services to deploy
-          if [ -n "${TARGET_SERVICE:-}" ]; then
+          if [ -n "${TARGET_SERVICE:-}" ] && [ "$TARGET_SERVICE" != "all" ]; then
             if [ "$TARGET_SERVICE" = "api-gateway" ]; then
               echo "Deploying only api-gateway"
               exit 0  # api-gateway already deployed above
@@ -151,7 +152,7 @@ jobs:
           echo "🔄 Restarting deployments to ensure ConfigMap changes are applied..."
           
           # Determine which services to restart
-          if [ -n "${TARGET_SERVICE:-}" ]; then
+          if [ -n "${TARGET_SERVICE:-}" ] && [ "$TARGET_SERVICE" != "all" ]; then
             if [ "$TARGET_SERVICE" = "api-gateway" ]; then
               SERVICES_TO_RESTART=("api-gateway")
             else
