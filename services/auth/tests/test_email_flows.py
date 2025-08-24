@@ -26,8 +26,8 @@ def client():
     global test_engine, TestSessionLocal
     
     # Set up test database
-    cfg = config.Config("services/auth/app/db/migrations/alembic.ini")
-    cfg.set_main_option("script_location", "services/auth/app/db/migrations")
+    cfg = config.Config("app/db/migrations/alembic.ini")
+    cfg.set_main_option("script_location", "app/db/migrations")
     db_url = "sqlite:///./test_auth.db"
     cfg.set_main_option("sqlalchemy.url", db_url)
     command.upgrade(cfg, "head")
@@ -59,12 +59,12 @@ def client():
 def test_email_flows(client):
     # Register
     r = client.post(
-        "/api/auth/email/register", json={"email": "u@example.com", "password": "pw"}
+        "/api/auth/email/register", json={"email": "u@example.com", "password": "Password123!"}
     )
     assert r.status_code == 200
 
     # Invalid verify
-    r = client.post("/api/auth/email/verify", json={"token": "bad"})
+    r = client.post("/api/auth/email/verify", json={"token": "invalid_token_that_is_at_least_32_characters_long"})
     assert r.status_code == 400
 
     # Get verification token from DB
@@ -84,7 +84,7 @@ def test_email_flows(client):
 
     # Login correct
     r = client.post(
-        "/api/auth/login", json={"email": "u@example.com", "password": "pw"}
+        "/api/auth/login", json={"email": "u@example.com", "password": "Password123!"}
     )
     assert r.status_code == 200
 
@@ -99,7 +99,7 @@ def test_email_flows(client):
     # Confirm reset
     r = client.post(
         "/api/auth/password/reset/confirm",
-        json={"token": pr_tok, "new_password": "newpw"},
+        json={"token": pr_tok, "new_password": "NewPassword123!"},
     )
     assert r.status_code == 200
     with Session(test_engine) as db:
@@ -107,12 +107,12 @@ def test_email_flows(client):
 
     # Old password fails
     r = client.post(
-        "/api/auth/login", json={"email": "u@example.com", "password": "pw"}
+        "/api/auth/login", json={"email": "u@example.com", "password": "Password123!"}
     )
     assert r.status_code == 401
 
     # New password works
     r = client.post(
-        "/api/auth/login", json={"email": "u@example.com", "password": "newpw"}
+        "/api/auth/login", json={"email": "u@example.com", "password": "NewPassword123!"}
     )
     assert r.status_code == 200
