@@ -26,8 +26,19 @@ def client():
     global test_engine, TestSessionLocal
     
     # Set up test database
-    cfg = config.Config("app/db/migrations/alembic.ini")
-    cfg.set_main_option("script_location", "app/db/migrations")
+    # Handle both local (from services/auth) and CI (from project root) environments
+    import os
+    if os.path.exists("app/db/migrations/alembic.ini"):
+        # Running from services/auth directory (local)
+        alembic_ini_path = "app/db/migrations/alembic.ini"
+        script_location = "app/db/migrations"
+    else:
+        # Running from project root (CI)
+        alembic_ini_path = "services/auth/app/db/migrations/alembic.ini"
+        script_location = "services/auth/app/db/migrations"
+    
+    cfg = config.Config(alembic_ini_path)
+    cfg.set_main_option("script_location", script_location)
     db_url = "sqlite:///./test_auth.db"
     cfg.set_main_option("sqlalchemy.url", db_url)
     command.upgrade(cfg, "head")
