@@ -41,8 +41,8 @@ app.add_middleware(
 app.add_middleware(MetricsMiddleware)
 
 # Include routers
+app.include_router(secure_auth.router)  # New secure router (takes precedence)
 app.include_router(email.router)  # Keep existing router for backward compatibility
-app.include_router(secure_auth.router)  # New secure router
 
 
 @app.get("/healthz")
