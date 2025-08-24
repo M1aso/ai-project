@@ -1,17 +1,34 @@
+"""
+Event emission for auth service using RabbitMQ.
+Publishes events to other services via message queue.
+"""
 from __future__ import annotations
+import logging
 
+from .event_publisher import publish_user_registered, publish_password_reset
 
-# TODO: Fix cross-service dependency - use message queue or HTTP calls instead
-# from services.notifications.app.subscribers import event_bus
+logger = logging.getLogger(__name__)
 
 
 def emit_user_registered(email: str, name: str | None = None) -> None:
-    # TODO: Implement proper event publishing (Redis pub/sub, RabbitMQ, etc.)
-    print(f"Event: user.registered - {email}")
-    # event_bus.publish("user.registered", {"email": email, "name": name})
+    """Emit user registration event via RabbitMQ."""
+    try:
+        success = publish_user_registered(email, name)
+        if success:
+            logger.info(f"Successfully published user.registered event for {email}")
+        else:
+            logger.warning(f"Failed to publish user.registered event for {email}")
+    except Exception as e:
+        logger.error(f"Error publishing user.registered event for {email}: {e}")
 
 
 def emit_password_reset(email: str, name: str | None = None) -> None:
-    # TODO: Implement proper event publishing (Redis pub/sub, RabbitMQ, etc.)
-    print(f"Event: auth.password_reset - {email}")
-    # event_bus.publish("auth.password_reset", {"email": email, "name": name})
+    """Emit password reset event via RabbitMQ."""
+    try:
+        success = publish_password_reset(email, name)
+        if success:
+            logger.info(f"Successfully published auth.password_reset event for {email}")
+        else:
+            logger.warning(f"Failed to publish auth.password_reset event for {email}")
+    except Exception as e:
+        logger.error(f"Error publishing auth.password_reset event for {email}: {e}")

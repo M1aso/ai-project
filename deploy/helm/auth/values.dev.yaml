@@ -37,6 +37,10 @@ env:
   - name: REDIS_PASSWORD
     value: ""  # No password in dev
   
+  # RabbitMQ Configuration (for event publishing)
+  - name: RABBITMQ_URL
+    value: "amqp://admin:admin123@rabbitmq.rabbitmq.svc.cluster.local:5672"
+  
   # JWT Security Configuration
   - name: JWT_SECRET_KEY
     value: "dev-jwt-secret-not-for-production-change-in-prod"

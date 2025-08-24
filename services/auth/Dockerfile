@@ -20,7 +20,8 @@ RUN pip install --prefix=/install --no-cache-dir \
     passlib[bcrypt] \
     pyjwt \
     redis \
-    psycopg2-binary
+    psycopg2-binary \
+    pika
 
 FROM python:3.12-slim
 
