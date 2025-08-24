@@ -1,22 +1,27 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from .db.database import reset_connection
 from .metrics import MetricsMiddleware, metrics
 from .routers import admin_experience, avatar, profile
 
-app = FastAPI(title="Profile Service")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    reset_connection()
+    yield
+    # Shutdown - add any cleanup here if needed
+
+
+app = FastAPI(title="Profile Service", lifespan=lifespan)
 app.add_middleware(MetricsMiddleware)
 
 # Include routers
 app.include_router(profile.router)
 app.include_router(avatar.router)
 app.include_router(admin_experience.router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Reset database connection on startup to ensure fresh connection with env vars."""
-    reset_connection()
 
 
 @app.get("/healthz")

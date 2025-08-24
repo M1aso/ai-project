@@ -9,11 +9,11 @@ from sqlalchemy.pool import StaticPool
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
+from services.profile.app.db.database import get_db
 from services.profile.app.db.models import (
     Base,
     Profile,
     ProfileHistory,
-    get_db,
 )
 from services.profile.app.routers.profile import router as profile_router
 

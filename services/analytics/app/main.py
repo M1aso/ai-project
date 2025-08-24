@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from time import time
 
 from fastapi import FastAPI, Request, Response
@@ -12,7 +13,16 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .db.database import reset_connection
 from .routers import ingest, reports
 
-app = FastAPI(title="Analytics Service")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    reset_connection()
+    yield
+    # Shutdown - add any cleanup here if needed
+
+
+app = FastAPI(title="Analytics Service", lifespan=lifespan)
 
 # Include routers
 app.include_router(ingest.router)
@@ -40,12 +50,6 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(MetricsMiddleware)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Reset database connection on startup to ensure fresh connection with env vars."""
-    reset_connection()
 
 
 @app.get("/healthz")
