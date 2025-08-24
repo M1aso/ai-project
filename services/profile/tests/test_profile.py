@@ -20,7 +20,7 @@ from services.profile.app.routers.profile import router as profile_router
 
 def setup_app():
     engine = create_engine(
-        "postgresql://postgres:postgres@localhost:5432/test_aiproject",
+        "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
