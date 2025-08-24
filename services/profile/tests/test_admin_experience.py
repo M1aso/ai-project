@@ -16,7 +16,7 @@ from services.profile.app.routers.admin_experience import router as admin_router
 
 def setup_app():
     engine = create_engine(
-        "postgresql://postgres:postgres@localhost:5432/test_aiproject",
+        "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )

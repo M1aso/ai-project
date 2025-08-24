@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/lib/pq"
+	_ "github.com/glebarez/sqlite"
 )
 
 func setup(t *testing.T) *Repo {
 	t.Helper()
-	db, err := sql.Open("postgres", "postgresql://postgres:postgres@localhost:5432/test_aiproject?sslmode=disable")
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
