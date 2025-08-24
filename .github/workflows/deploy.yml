@@ -162,26 +162,46 @@ jobs:
             SERVICES_TO_RESTART=(api-gateway auth profile content notifications chat analytics content-worker swagger-ui)
           fi
           
+          # Track successful and failed restarts
+          RESTARTED_SERVICES=()
+          FAILED_SERVICES=()
+          
           # Restart each deployment
           for svc in "${SERVICES_TO_RESTART[@]}"; do
-            echo "Restarting deployment: $svc"
+            echo "🔄 Restarting deployment: $svc"
             if kubectl get deployment "$svc" -n "$NS" >/dev/null 2>&1; then
-              kubectl rollout restart "deployment/$svc" -n "$NS"
-              echo "✓ Restarted $svc deployment"
+              if kubectl rollout restart "deployment/$svc" -n "$NS"; then
+                echo "✓ Successfully triggered restart for $svc"
+                RESTARTED_SERVICES+=("$svc")
+              else
+                echo "❌ Failed to restart $svc"
+                FAILED_SERVICES+=("$svc")
+              fi
             else
               echo "⚠️  Deployment $svc not found, skipping restart"
             fi
           done
           
-          # Wait for rollouts to complete for critical services
-          echo "⏳ Waiting for critical services to be ready..."
-          for svc in api-gateway; do
-            if kubectl get deployment "$svc" -n "$NS" >/dev/null 2>&1; then
-              echo "Waiting for $svc rollout to complete..."
-              kubectl rollout status "deployment/$svc" -n "$NS" --timeout=300s
-              echo "✅ $svc is ready"
+          # Wait for all restarted deployments to complete
+          echo "⏳ Waiting for all restarted deployments to be ready..."
+          for svc in "${RESTARTED_SERVICES[@]}"; do
+            echo "Waiting for $svc rollout to complete..."
+            if kubectl rollout status "deployment/$svc" -n "$NS" --timeout=300s; then
+              echo "✅ $svc rollout completed successfully"
+            else
+              echo "❌ $svc rollout failed or timed out"
+              FAILED_SERVICES+=("$svc")
             fi
           done
           
-          echo "🎉 All deployments restarted successfully!"
+          # Report results
+          echo "📊 Restart Summary:"
+          echo "✅ Successfully restarted: ${RESTARTED_SERVICES[*]:-none}"
+          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+            echo "❌ Failed services: ${FAILED_SERVICES[*]}"
+            echo "::error::Some services failed to restart properly"
+            exit 1
+          else
+            echo "🎉 All deployments restarted successfully!"
+          fi
 
