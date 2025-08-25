@@ -40,6 +40,18 @@ hpa:
 
 env: []  # e.g. [{ name: SOME_VAR, value: "value" }]
 
+# Rate Limiting Configuration (examples)
+# - name: MAX_LOGIN_ATTEMPTS
+#   value: "5"
+# - name: RATE_LIMIT_WINDOW
+#   value: "3600"
+# - name: AUTH_RATE_LIMIT_PER_IP
+#   value: "10"  # Auth requests per IP per hour
+# - name: GENERAL_RATE_LIMIT_PER_IP
+#   value: "100"  # General requests per IP per hour
+# - name: LOGIN_RATE_LIMIT_PER_IP
+#   value: "10"  # Failed login attempts per IP per hour
+
 ingress:
   enabled: false
   className: nginx

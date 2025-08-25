@@ -56,6 +56,12 @@ env:
     value: "5"
   - name: RATE_LIMIT_WINDOW
     value: "3600"
+  - name: AUTH_RATE_LIMIT_PER_IP
+    value: "50"  # Increased from 10 to 50 per hour for development
+  - name: GENERAL_RATE_LIMIT_PER_IP
+    value: "200"  # Increased from 100 to 200 per hour for development
+  - name: LOGIN_RATE_LIMIT_PER_IP
+    value: "20"  # Failed login attempts per IP per hour
   
   # Session Management
   - name: SESSION_TTL

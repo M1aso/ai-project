@@ -65,8 +65,12 @@ class AdvancedRateLimiter:
         else:
             self._memory_store.pop(key, None)
     
-    def check_login_attempts(self, identifier: str, max_attempts: int = 5) -> bool:
+    def check_login_attempts(self, identifier: str, max_attempts: int = None) -> bool:
         """Check login attempts with exponential backoff."""
+        # Get max attempts from environment variable
+        if max_attempts is None:
+            max_attempts = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
+            
         key = f"login_attempts:{identifier}"
         
         data = self._get_key_data(key)
@@ -175,15 +179,23 @@ async def check_rate_limit(request: Request):
     if request.url.path in ["/healthz", "/readyz", "/metrics"]:
         return
     
-    # Check IP-based rate limiting (100 requests per hour)
-    if not rate_limiter.check_rate_limit(f"ip:{client_ip}", limit=100, window_seconds=3600):
-        raise HTTPException(status_code=429, detail="Too many requests from this IP")
+    # Get rate limit from environment variables
+    general_limit = int(os.getenv("GENERAL_RATE_LIMIT_PER_IP", "100"))
+    window_seconds = int(os.getenv("RATE_LIMIT_WINDOW", "3600"))
+    
+    # Check IP-based rate limiting
+    if not rate_limiter.check_rate_limit(f"ip:{client_ip}", limit=general_limit, window_seconds=window_seconds):
+        raise HTTPException(status_code=429, detail=f"Too many requests from this IP. Limit: {general_limit} per {window_seconds//3600} hour(s)")
 
 
 async def check_auth_rate_limit(request: Request):
     """More strict rate limiting for authentication endpoints."""
     client_ip = request.client.host if request.client else "unknown"
     
-    # Check IP-based auth rate limiting (10 requests per hour)
-    if not rate_limiter.check_rate_limit(f"auth_ip:{client_ip}", limit=10, window_seconds=3600):
-        raise HTTPException(status_code=429, detail="Too many authentication attempts from this IP")
+    # Get auth rate limit from environment variables
+    auth_limit = int(os.getenv("AUTH_RATE_LIMIT_PER_IP", "10"))
+    window_seconds = int(os.getenv("RATE_LIMIT_WINDOW", "3600"))
+    
+    # Check IP-based auth rate limiting
+    if not rate_limiter.check_rate_limit(f"auth_ip:{client_ip}", limit=auth_limit, window_seconds=window_seconds):
+        raise HTTPException(status_code=429, detail=f"Too many authentication attempts from this IP. Limit: {auth_limit} per {window_seconds//3600} hour(s)")
