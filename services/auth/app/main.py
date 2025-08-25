@@ -62,14 +62,29 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting Authentication Service...")
     
-    # Wait for database if migrations are enabled
-    if os.getenv("RUN_MIGRATIONS", "true").lower() == "true":
-        if wait_for_database():
-            run_migrations()
-        else:
-            print("⚠️ Skipping migrations due to database connection issues")
+    # Check if we're in a CI environment (no database)
+    ci_mode = os.getenv("CI", "false").lower() == "true"
     
-    reset_connection()
+    if ci_mode:
+        print("🔧 CI mode detected - skipping database operations")
+        # In CI, we just want the service to start for OpenAPI generation
+        # Don't try to connect to database or run migrations
+    else:
+        # Wait for database if migrations are enabled
+        if os.getenv("RUN_MIGRATIONS", "true").lower() == "true":
+            if wait_for_database():
+                run_migrations()
+            else:
+                print("⚠️ Skipping migrations due to database connection issues")
+        else:
+            print("⏭️ Migrations disabled via environment variable")
+    
+    # Always reset connection (safe to call even if no DB)
+    try:
+        reset_connection()
+    except Exception as e:
+        print(f"⚠️ Connection reset warning: {e}")
+    
     print("✅ Service startup completed")
     
     yield

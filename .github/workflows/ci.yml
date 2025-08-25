@@ -39,7 +39,7 @@ jobs:
           
           # Start Auth Service (port 8001)
           cd services/auth
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
           AUTH_PID=$!
           echo "🔐 Auth service started with PID: $AUTH_PID"
           
