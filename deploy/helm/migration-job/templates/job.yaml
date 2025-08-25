@@ -15,17 +15,18 @@ spec:
             - -c
             - |
               echo "🗄️ Starting database migration for {{ .Values.serviceName }}..."
-              cd /app
               
               # Check service type and run appropriate migration
-              if [ "{{ .Values.serviceName }}" = "auth" ] || [ "{{ .Values.serviceName }}" = "profile" ]; then
+              if [ "{{ .Values.serviceName }}" = "auth" ] || [ "{{ .Values.serviceName }}" = "profile" ] || [ "{{ .Values.serviceName }}" = "analytics" ]; then
                 echo "Running Python/Alembic migration..."
+                cd /app/app/db/migrations
                 export PYTHONPATH=/app
-                python -m alembic -c app/db/migrations/alembic.ini upgrade head
+                alembic upgrade head
               elif [ "{{ .Values.serviceName }}" = "content" ]; then
                 echo "Running Go migration..."
+                cd /app/internal/db/migrations
                 # For Go services, we'd typically use a migration tool like goose or migrate
-                echo "Go migrations not implemented yet"
+                echo "Go migrations not implemented yet - skipping"
               else
                 echo "No migrations needed for {{ .Values.serviceName }}"
               fi
