@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import pytest
 from alembic import command, config
@@ -67,7 +68,13 @@ def client():
         os.remove("test_auth.db")
 
 
-def test_email_flows(client):
+@patch('services.auth.app.services.email_service.email_service.send_verification_email')
+@patch('services.auth.app.services.email_service.email_service.send_welcome_email')
+def test_email_flows(mock_welcome_email, mock_verification_email, client):
+    # Mock email service to return success
+    mock_verification_email.return_value = True
+    mock_welcome_email.return_value = True
+    
     # Register
     r = client.post(
         "/api/auth/email/register", json={"email": "u@example.com", "password": "Password123!"}

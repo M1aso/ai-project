@@ -29,6 +29,9 @@ def upgrade():
                        type_=sa.VARCHAR(length=512),
                        existing_nullable=False,
                        postgresql_using='token::varchar(512)')
+        
+        # Create the missing index for user_id and family
+        op.create_index('ix_refresh_tokens_user_id_family', 'refresh_tokens', ['user_id', 'family'])
     elif dialect == 'sqlite':
         # SQLite doesn't support ALTER COLUMN, so we need to recreate the table
         # Create new table with correct schema
@@ -51,12 +54,18 @@ def upgrade():
         
         # Rename new table to original name
         op.rename_table('refresh_tokens_new', 'refresh_tokens')
+        
+        # Create the missing index for user_id and family
+        op.create_index('ix_refresh_tokens_user_id_family', 'refresh_tokens', ['user_id', 'family'])
     else:
         # For other databases, try the standard approach
         op.alter_column('refresh_tokens', 'token',
                        existing_type=sa.VARCHAR(length=64),
                        type_=sa.VARCHAR(length=512),
                        existing_nullable=False)
+        
+        # Create the missing index for user_id and family
+        op.create_index('ix_refresh_tokens_user_id_family', 'refresh_tokens', ['user_id', 'family'])
 
 
 def downgrade():
@@ -92,6 +101,9 @@ def downgrade():
         
         # Rename old table to original name
         op.rename_table('refresh_tokens_old', 'refresh_tokens')
+        
+        # Create the missing index for user_id and family
+        op.create_index('ix_refresh_tokens_user_id_family', 'refresh_tokens', ['user_id', 'family'])
     else:
         # For other databases, try the standard approach
         op.alter_column('refresh_tokens', 'token',
