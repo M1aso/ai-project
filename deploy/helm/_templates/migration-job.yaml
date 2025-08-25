@@ -20,8 +20,6 @@ spec:
       restartPolicy: Never
       {{- if .Values.migrations.serviceAccountName }}
       serviceAccountName: {{ .Values.migrations.serviceAccountName }}
-      {{- else }}
-      serviceAccountName: {{ include "svc.fullname" . }}
       {{- end }}
       containers:
         - name: migration
