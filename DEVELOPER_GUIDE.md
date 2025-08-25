@@ -71,6 +71,34 @@ This guide covers everything a new developer needs to know to work with the AI P
 - Git
 ```
 
+### API Documentation Development
+
+**Dynamic OpenAPI Generation**: Each service automatically generates its OpenAPI specification, eliminating the need for manual YAML maintenance.
+
+**Local Service Documentation**:
+```bash
+# Start individual services and access their docs
+cd services/auth && python -m uvicorn app.main:app --port 8000
+# Visit: http://localhost:8000/api/auth/docs
+
+cd services/profile && python -m uvicorn app.main:app --port 8001  
+# Visit: http://localhost:8001/api/profile/docs
+
+# Go service
+cd services/content && go run cmd/server/main.go
+# Visit: http://localhost:8002/api/content/docs
+
+# Node.js service
+cd services/chat && npm start
+# Visit: http://localhost:8003/api/chats/docs
+```
+
+**Benefits for Developers**:
+- ✅ **Code changes immediately reflect in docs**
+- ✅ **No manual documentation updates required**
+- ✅ **Interactive testing from documentation**
+- ✅ **Professional API documentation with examples**
+
 ### 1. Clone Repository
 
 ```bash

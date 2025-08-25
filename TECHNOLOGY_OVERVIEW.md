@@ -11,7 +11,7 @@ graph TB
     end
     
     subgraph "API Layer"
-        GW[API Gateway<br/>Node.js + Express]
+        GW[API Gateway<br/>Envoy Proxy]
     end
     
     subgraph "Service Layer"
@@ -75,6 +75,7 @@ graph TB
 - 📝 **Auto Documentation**: OpenAPI/Swagger docs generated automatically
 - 🔍 **Type Safety**: Pydantic models with validation
 - 🛡️ **Security**: Built-in OAuth2, JWT, rate limiting support
+- 🚀 **Dynamic OpenAPI**: Live API documentation that auto-updates with code changes
 
 **Key Features**:
 ```python
