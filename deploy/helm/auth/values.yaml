@@ -18,22 +18,31 @@ resources:
     cpu: 200m
     memory: 256Mi
 
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 18
+  timeoutSeconds: 5
+
 livenessProbe:
   httpGet:
     path: /healthz
     port: http
-  initialDelaySeconds: 120
-  periodSeconds: 10
-  failureThreshold: 10
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  failureThreshold: 3
   timeoutSeconds: 5
 
 readinessProbe:
   httpGet:
     path: /readyz
     port: http
-  initialDelaySeconds: 120
+  initialDelaySeconds: 10
   periodSeconds: 10
-  failureThreshold: 10
+  failureThreshold: 3
   timeoutSeconds: 5
 
 hpa:

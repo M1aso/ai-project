@@ -24,16 +24,28 @@ spec:
                 
                 # Check current database state and fix if needed
                 echo "Checking current migration state..."
-                current_revision=$(alembic current 2>/dev/null | grep -o '[a-f0-9_]*$' || echo "none")
-                echo "Current database revision: $current_revision"
                 
-                # If revision doesn't match any file, stamp with the latest
-                if [ "$current_revision" != "none" ] && ! ls versions/*$current_revision*.py 2>/dev/null; then
-                  echo "Database revision '$current_revision' not found in migration files"
-                  echo "Stamping database with latest migration..."
-                  latest_migration=$(ls versions/*.py | tail -1 | grep -o '[0-9][0-9][0-9][0-9][a-zA-Z_]*' | head -1)
-                  echo "Latest migration: $latest_migration"
-                  alembic stamp $latest_migration
+                # List available migration files
+                echo "Available migration files:"
+                ls -la versions/
+                
+                # Try to get current revision, handle errors gracefully
+                current_revision=$(alembic current 2>/dev/null || echo "failed")
+                echo "Current database revision check: $current_revision"
+                
+                # If alembic current fails or revision doesn't exist in files, reset to latest
+                if [ "$current_revision" = "failed" ] || echo "$current_revision" | grep -q "Can't locate revision"; then
+                  echo "Database has invalid or missing revision, resetting to latest migration"
+                  latest_file=$(ls versions/*.py | sort | tail -1)
+                  latest_revision=$(basename "$latest_file" .py)
+                  echo "Stamping database with latest migration: $latest_revision"
+                  alembic stamp "$latest_revision" --purge
+                elif ! ls versions/*$(echo "$current_revision" | tail -1)*.py 2>/dev/null; then
+                  echo "Database revision not found in migration files, resetting"
+                  latest_file=$(ls versions/*.py | sort | tail -1)
+                  latest_revision=$(basename "$latest_file" .py)
+                  echo "Stamping database with latest migration: $latest_revision"
+                  alembic stamp "$latest_revision" --purge
                 fi
                 
                 # Run migration upgrade
