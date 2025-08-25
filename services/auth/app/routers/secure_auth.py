@@ -443,41 +443,51 @@ async def refresh_token(
     }
 )
 async def get_current_user_info(
-    current_user: models.User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get information about the currently authenticated user."""
+    # Get user from database using the user_id from JWT
+    user = db.query(models.User).filter_by(id=current_user["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     return {
-        "user_id": current_user.id,
-        "email": current_user.email,
-        "is_active": current_user.is_active,
-        "login_type": current_user.login_type,
-        "created_at": current_user.created_at,
+        "user_id": user.id,
+        "email": user.email,
+        "is_active": user.is_active,
+        "login_type": user.login_type,
+        "created_at": user.created_at,
         "message": "Authentication successful!"
     }
 
 
 @router.get("/profile")
 async def get_user_profile(
-    current_user: models.User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get detailed user profile (requires authentication)."""
+    # Get user from database using the user_id from JWT
+    user = db.query(models.User).filter_by(id=current_user["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     # Get additional user data
-    verification_count = db.query(models.EmailVerification).filter_by(user_id=current_user.id).count()
+    verification_count = db.query(models.EmailVerification).filter_by(user_id=user.id).count()
     
     return {
         "profile": {
-            "user_id": current_user.id,
-            "email": current_user.email,
-            "is_active": current_user.is_active,
-            "login_type": current_user.login_type,
-            "created_at": current_user.created_at,
-            "updated_at": current_user.updated_at
+            "user_id": user.id,
+            "email": user.email,
+            "is_active": user.is_active,
+            "login_type": user.login_type,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
         },
         "stats": {
             "pending_verifications": verification_count,
-            "account_age_days": (datetime.now(timezone.utc) - current_user.created_at.replace(tzinfo=timezone.utc)).days
+            "account_age_days": (datetime.now(timezone.utc) - user.created_at.replace(tzinfo=timezone.utc)).days
         },
         "message": "Profile retrieved successfully"
     }
@@ -489,7 +499,6 @@ async def get_user_profile(
     description="Get a paginated list of all users. Requires admin privileges.",
     response_description="Paginated list of users",
     tags=["Admin Endpoints"],
-    dependencies=[Depends(security)],
     responses={
         200: {
             "description": "Users retrieved successfully",
@@ -521,7 +530,7 @@ async def get_user_profile(
     }
 )
 async def list_all_users(
-    current_user: models.User = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = 10,
     offset: int = 0
@@ -587,7 +596,6 @@ async def public_endpoint():
     description="Test endpoint that requires JWT authentication. Used for testing authentication flow.",
     response_description="Protected endpoint response with user info",
     tags=["Test Endpoints"],
-    dependencies=[Depends(security)],
     responses={
         200: {
             "description": "Protected endpoint accessible with valid authentication",
@@ -606,12 +614,18 @@ async def public_endpoint():
     }
 )
 async def protected_endpoint(
-    current_user: models.User = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Test endpoint that requires valid JWT authentication."""
+    # Get user from database using the user_id from JWT
+    user = db.query(models.User).filter_by(id=current_user["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     return {
-        "message": f"Hello {current_user.email}! This endpoint requires authentication.",
-        "user_id": current_user.id,
+        "message": f"Hello {user.email}! This endpoint requires authentication.",
+        "user_id": user.id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status": "authenticated"
     }
