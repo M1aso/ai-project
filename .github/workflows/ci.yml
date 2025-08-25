@@ -325,8 +325,8 @@ jobs:
               # Delete existing migration job if it exists
               kubectl delete job "${svc}-migration" -n "$NS" --ignore-not-found=true
               
-              # Create migration job using template
-              helm template "${svc}-migration" deploy/helm/_templates/migration-job.yaml \
+              # Create migration job using chart
+              helm template "${svc}-migration" deploy/helm/migration-job \
                 --set "serviceName=$svc" \
                 --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
                 --set "image.tag=${{ github.sha }}" \

@@ -1,0 +1,5 @@
+serviceName: ""
+namespace: dev
+image:
+  repository: ""
+  tag: ""
