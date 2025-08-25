@@ -256,6 +256,57 @@ jobs:
           echo "🚀 Starting deployment of all services..."
           echo "📊 Services to deploy: auth, profile, content, notifications, chat, analytics, content-worker, swagger-ui"
           
+          # Clean up any stuck operations first
+          echo "🧹 Cleaning up any stuck Helm operations..."
+          for svc in auth profile content notifications chat analytics content-worker swagger-ui; do
+            # Check if there are any pending operations
+            if helm status "$svc" -n "$NS" 2>/dev/null | grep -q "pending\|upgrading"; then
+              echo "⚠️ Found pending operation for $svc, attempting to rollback..."
+              if helm rollback "$svc" -n "$NS" --timeout 5m; then
+                echo "✅ Successfully rolled back $svc"
+              else
+                echo "⚠️ Rollback failed for $svc, will continue with deployment"
+              fi
+            fi
+          done
+          
+          # Wait a bit for cleanup to complete
+          echo "⏳ Waiting for cleanup to complete..."
+          sleep 30
+          
+          # Function to check if a release is in progress
+          check_release_status() {
+            local svc=$1
+            local status=$(helm status "$svc" -n "$NS" 2>/dev/null | grep -E "STATUS:|REVISION:" || echo "not_found")
+            echo "$status"
+          }
+          
+          # Function to wait for release to be ready
+          wait_for_release() {
+            local svc=$1
+            local max_wait=300  # 5 minutes
+            local wait_time=0
+            local interval=10
+            
+            echo "⏳ Waiting for $svc release to be ready..."
+            while [ $wait_time -lt $max_wait ]; do
+              local status=$(helm status "$svc" -n "$NS" 2>/dev/null | grep "STATUS:" | awk '{print $2}' || echo "unknown")
+              if [ "$status" = "deployed" ]; then
+                echo "✅ $svc release is ready"
+                return 0
+              elif [ "$status" = "failed" ]; then
+                echo "❌ $svc release failed"
+                return 1
+              else
+                echo "⏳ $svc release status: $status (waiting...)"
+                sleep $interval
+                wait_time=$((wait_time + interval))
+              fi
+            done
+            echo "⏰ Timeout waiting for $svc release"
+            return 1
+          }
+          
           # Track deployment progress
           DEPLOYED_SERVICES=()
           FAILED_SERVICES=()
@@ -264,19 +315,52 @@ jobs:
           echo "🔧 Deploying core services with migrations..."
           for svc in auth profile content notifications; do
             echo "🔄 Deploying $svc..."
+            
+            # Check if release is already in progress
+            local release_status=$(check_release_status "$svc")
+            if echo "$release_status" | grep -q "pending\|upgrading"; then
+              echo "⚠️ $svc release is already in progress, waiting for completion..."
+              if wait_for_release "$svc"; then
+                echo "✅ $svc was already being deployed and is now ready"
+                DEPLOYED_SERVICES+=("$svc")
+                continue
+              else
+                echo "❌ $svc release failed or timed out, will retry deployment"
+              fi
+            fi
+            
             VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
             if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
             
-            if helm upgrade --install "$svc" "deploy/helm/$svc" \
-              --namespace "$NS" --create-namespace \
-              --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
-              --set "image.tag=${{ github.sha }}" \
-              --timeout 10m \
-              "${EXTRA_VALUES[@]}"; then
-              echo "✅ $svc deployed successfully"
-              DEPLOYED_SERVICES+=("$svc")
-            else
-              echo "❌ $svc deployment failed"
+            # Try deployment with retry logic
+            local max_retries=2
+            local retry_count=0
+            local deploy_success=false
+            
+            while [ $retry_count -le $max_retries ] && [ "$deploy_success" = false ]; do
+              if [ $retry_count -gt 0 ]; then
+                echo "🔄 Retry $retry_count/$max_retries for $svc..."
+                # Wait a bit before retry
+                sleep 30
+              fi
+              
+              if helm upgrade --install "$svc" "deploy/helm/$svc" \
+                --namespace "$NS" --create-namespace \
+                --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
+                --set "image.tag=${{ github.sha }}" \
+                --timeout 10m \
+                "${EXTRA_VALUES[@]}"; then
+                echo "✅ $svc deployed successfully"
+                DEPLOYED_SERVICES+=("$svc")
+                deploy_success=true
+              else
+                echo "❌ $svc deployment attempt $((retry_count + 1)) failed"
+                retry_count=$((retry_count + 1))
+              fi
+            done
+            
+            if [ "$deploy_success" = false ]; then
+              echo "❌ $svc deployment failed after $max_retries retries"
               FAILED_SERVICES+=("$svc")
             fi
           done
