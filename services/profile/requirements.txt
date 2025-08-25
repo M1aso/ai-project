@@ -1,0 +1,17 @@
+# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+
+# Validation
+pydantic==2.5.0
+
+# Monitoring
+prometheus_client==0.19.0
+
+# HTTP and Middleware
+starlette==0.27.0
