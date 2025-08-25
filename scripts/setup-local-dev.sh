@@ -321,7 +321,7 @@ echo
 echo "📚 Application Services:"
 echo "======================="
 
-services=("auth:8001" "profile:8002" "content:8003" "notifications:8004" "chat:8005" "analytics:8006")
+services=("auth:8000" "profile:8002" "content:8003" "notifications:8004" "chat:8005" "analytics:8006")
 
 for service in "${services[@]}"; do
     name=$(echo $service | cut -d: -f1)
@@ -381,8 +381,8 @@ echo "🛑 Stopping all services..."
 docker compose -f docker-compose.dev.yml down
 
 # Kill any running application services
-echo "Killing application services on ports 8001-8006..."
-for port in {8001..8006}; do
+echo "Killing application services on ports 8000-8006..."
+for port in {8000..8006}; do
     lsof -ti:$port | xargs kill -9 2>/dev/null || true
 done
 
@@ -408,7 +408,7 @@ main() {
     start_infrastructure
     
     # Setup all services
-    setup_python_service "auth" "8001"
+    setup_python_service "auth" "8000"
     setup_python_service "profile" "8002"
     setup_content_service
     setup_python_service "notifications" "8004"

@@ -141,7 +141,7 @@ X-Request-ID: unique-request-id
 
 ### Development
 ```bash
-AUTH_API_URL=http://localhost:8001
+AUTH_API_URL=http://localhost:8000
 CHAT_API_URL=http://localhost:8002
 CONTENT_API_URL=http://localhost:8003
 ```

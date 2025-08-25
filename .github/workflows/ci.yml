@@ -37,25 +37,25 @@ jobs:
         run: |
           echo "🚀 Starting services for OpenAPI generation..."
           
-          # Start Auth Service
+          # Start Auth Service (port 8000)
           cd services/auth
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           AUTH_PID=$!
           echo "🔐 Auth service started with PID: $AUTH_PID"
           
-          # Start Profile Service
+          # Start Profile Service (port 8002)
           cd ../profile
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 &
           PROFILE_PID=$!
           echo "👤 Profile service started with PID: $PROFILE_PID"
           
-          # Start Analytics Service
+          # Start Analytics Service (port 8003)
           cd ../analytics
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
           ANALYTICS_PID=$!
           echo "📊 Analytics service started with PID: $ANALYTICS_PID"
           
-          # Start Notifications Service
+          # Start Notifications Service (port 8004)
           cd ../notifications
           python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 &
           NOTIFICATIONS_PID=$!
@@ -67,7 +67,7 @@ jobs:
           
           # Health check all services
           echo "🔍 Health checking services..."
-          for port in 8001 8002 8003 8004; do
+          for port in 8000 8002 8003 8004; do
             echo "Checking port $port..."
             timeout 10s bash -c "until curl -s http://localhost:$port/healthz > /dev/null; do sleep 1; done" || echo "Service on port $port not ready"
           done
@@ -91,8 +91,8 @@ jobs:
           
           # Lint each service's live OpenAPI spec with better error handling
           echo "🔐 Linting Auth Service OpenAPI spec..."
-          if curl -s "http://localhost:8001/api/auth/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8000/api/auth/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8000/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
             echo "✅ Auth service OpenAPI spec validated"
           else
             echo "❌ Auth service OpenAPI endpoint not accessible"
