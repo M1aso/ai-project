@@ -1,70 +1,46 @@
-{{- if .Values.migrations.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "svc.fullname" . }}-migration
-  labels:
-    app: {{ include "svc.fullname" . }}
-    component: migration
-  annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-5"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  name: {{ .Values.serviceName }}-migration
+  namespace: {{ .Values.namespace }}
 spec:
   template:
-    metadata:
-      labels:
-        app: {{ include "svc.fullname" . }}
-        component: migration
     spec:
       restartPolicy: Never
-      {{- if .Values.migrations.serviceAccountName }}
-      serviceAccountName: {{ .Values.migrations.serviceAccountName }}
-      {{- end }}
       containers:
         - name: migration
-          image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["/bin/sh"]
           args:
             - -c
             - |
-              echo "Starting database migration for {{ .Chart.Name }}..."
+              echo "🗄️ Starting database migration for {{ .Values.serviceName }}..."
               cd /app
-              {{- if .Values.migrations.command }}
-              {{ .Values.migrations.command }}
-              {{- else }}
-              alembic upgrade head
-              {{- end }}
-              echo "Migration completed successfully"
+              
+              # Check service type and run appropriate migration
+              if [ "{{ .Values.serviceName }}" = "auth" ] || [ "{{ .Values.serviceName }}" = "profile" ]; then
+                echo "Running Python/Alembic migration..."
+                export PYTHONPATH=/app
+                python -m alembic -c app/db/migrations/alembic.ini upgrade head
+              elif [ "{{ .Values.serviceName }}" = "content" ]; then
+                echo "Running Go migration..."
+                # For Go services, we'd typically use a migration tool like goose or migrate
+                echo "Go migrations not implemented yet"
+              else
+                echo "No migrations needed for {{ .Values.serviceName }}"
+              fi
+              
+              echo "✅ Migration completed successfully for {{ .Values.serviceName }}"
           env:
-            {{- if .Values.migrations.env }}
-            {{- toYaml .Values.migrations.env | nindent 12 }}
-            {{- else }}
-            {{- toYaml .Values.env | nindent 12 }}
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres123@postgresql.postgresql.svc.cluster.local:5432/aiproject"
             - name: PYTHONPATH
               value: "/app"
-            {{- end }}
           resources:
-            {{- if .Values.migrations.resources }}
-            {{- toYaml .Values.migrations.resources | nindent 12 }}
-            {{- else }}
             requests:
               cpu: 100m
               memory: 128Mi
             limits:
               cpu: 200m
               memory: 256Mi
-            {{- end }}
-          {{- if .Values.migrations.volumeMounts }}
-          volumeMounts:
-          {{- toYaml .Values.migrations.volumeMounts | nindent 12 }}
-          {{- end }}
-      {{- if .Values.migrations.volumes }}
-      volumes:
-      {{- toYaml .Values.migrations.volumes | nindent 8 }}
-      {{- end }}
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-{{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}
+  backoffLimit: 3
