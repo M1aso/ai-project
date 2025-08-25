@@ -7,21 +7,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-RUN pip install --prefix=/install --no-cache-dir \
-    fastapi \
-    uvicorn[standard] \
-    sqlalchemy \
-    prometheus_client \
-    pydantic[email] \
-    email-validator \
-    alembic \
-    starlette \
-    passlib[bcrypt] \
-    pyjwt \
-    redis \
-    psycopg2-binary \
-    pika
+# Copy and install Python dependencies from requirements.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --prefix=/install --no-cache-dir -r /tmp/requirements.txt
 
 FROM python:3.12-slim
 
