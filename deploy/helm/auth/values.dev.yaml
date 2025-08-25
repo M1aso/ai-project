@@ -100,3 +100,6 @@ env:
     value: "noreply@aiproject-dev.com"
   - name: FRONTEND_URL
     value: "http://docs.45.146.164.70.nip.io"
+  # API Base URL for verification links
+  - name: API_BASE_URL
+    value: "http://api.45.146.164.70.nip.io"

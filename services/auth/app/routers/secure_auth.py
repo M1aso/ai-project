@@ -8,6 +8,7 @@ from ..security.middleware import (
     require_admin,
     require_authenticated
 )
+from ..db import models
 from ..security.advanced_rate_limit import rate_limiter, check_auth_rate_limit
 from ..security.session_manager import session_manager
 from ..validation.validators import (
@@ -95,7 +96,7 @@ async def secure_verify(
     db: Session = Depends(get_db),
     user_agent: str = Header(None)
 ):
-    """Secure email verification."""
+    """Secure email verification via POST."""
     client_info = get_client_info(request, user_agent)
     
     try:
@@ -120,6 +121,51 @@ async def secure_verify(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Email verification failed")
+
+
+@router.get("/email/verify")
+async def verify_email_link(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user_agent: str = Header(None)
+):
+    """Email verification via GET link (for email clicks)."""
+    client_info = get_client_info(request, user_agent)
+    
+    try:
+        # Verify email and get tokens
+        result = email_flows.verify(db, token)
+        
+        # Create session
+        device_info = {"user_agent": client_info["user_agent"]}
+        session_id = session_manager.create_session(
+            result.get("user_id", "unknown"), 
+            device_info, 
+            client_info["ip_address"]
+        )
+        
+        # Return success page or redirect
+        return {
+            **result,
+            "session_id": session_id,
+            "message": "Email verified successfully! You can now log in.",
+            "redirect_url": f"{request.base_url}login"
+        }
+        
+    except HTTPException as e:
+        # Return user-friendly error
+        return {
+            "error": str(e.detail),
+            "message": "Email verification failed. The link may be expired or invalid.",
+            "redirect_url": f"{request.base_url}register"
+        }
+    except Exception as e:
+        return {
+            "error": "verification_failed",
+            "message": "Email verification failed due to a server error.",
+            "redirect_url": f"{request.base_url}register"
+        }
 
 
 @router.post("/login")
@@ -307,31 +353,102 @@ async def refresh_token(
         raise HTTPException(status_code=500, detail="Token refresh failed")
 
 
-@router.get("/profile")
-async def get_profile(current_user: dict = Depends(require_authenticated)):
-    """Get current user profile (protected endpoint)."""
+# =============================================================================
+# PROTECTED ENDPOINTS FOR TESTING AUTHENTICATION
+# =============================================================================
+
+@router.get("/me")
+async def get_current_user_info(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user information (requires authentication)."""
     return {
-        "user_id": current_user["user_id"],
-        "roles": current_user["roles"],
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "is_active": current_user.is_active,
+        "login_type": current_user.login_type,
+        "created_at": current_user.created_at,
+        "message": "Authentication successful!"
+    }
+
+
+@router.get("/profile")
+async def get_user_profile(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed user profile (requires authentication)."""
+    # Get additional user data
+    verification_count = db.query(models.EmailVerification).filter_by(user_id=current_user.id).count()
+    
+    return {
+        "profile": {
+            "user_id": current_user.id,
+            "email": current_user.email,
+            "is_active": current_user.is_active,
+            "login_type": current_user.login_type,
+            "created_at": current_user.created_at,
+            "updated_at": current_user.updated_at
+        },
+        "stats": {
+            "pending_verifications": verification_count,
+            "account_age_days": (datetime.now(timezone.utc) - current_user.created_at.replace(tzinfo=timezone.utc)).days
+        },
         "message": "Profile retrieved successfully"
     }
 
 
 @router.get("/admin/users")
-async def admin_get_users(current_user: dict = Depends(require_admin)):
-    """Admin endpoint to get users (example of role-based access)."""
-    # This would typically fetch users from database
+async def list_all_users(
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    limit: int = 10,
+    offset: int = 0
+):
+    """List all users (requires admin privileges)."""
+    users = db.query(models.User).offset(offset).limit(limit).all()
+    total_count = db.query(models.User).count()
+    
     return {
-        "message": "Admin access granted",
-        "admin_user": current_user["user_id"]
+        "users": [
+            {
+                "user_id": user.id,
+                "email": user.email,
+                "is_active": user.is_active,
+                "login_type": user.login_type,
+                "created_at": user.created_at
+            }
+            for user in users
+        ],
+        "pagination": {
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + limit) < total_count
+        },
+        "message": f"Retrieved {len(users)} users"
     }
 
 
-@router.get("/health")
-async def health_check():
-    """Health check endpoint (no authentication required)."""
+@router.get("/test/public")
+async def public_endpoint():
+    """Public endpoint (no authentication required)."""
     return {
-        "status": "healthy",
-        "service": "auth",
-        "timestamp": "2024-01-01T00:00:00Z"  # In real implementation, use actual timestamp
+        "message": "This is a public endpoint - no authentication required",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": "public"
+    }
+
+
+@router.get("/test/protected")
+async def protected_endpoint(
+    current_user: models.User = Depends(get_current_user)
+):
+    """Protected endpoint (requires valid JWT token)."""
+    return {
+        "message": f"Hello {current_user.email}! This endpoint requires authentication.",
+        "user_id": current_user.id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": "authenticated"
     }

@@ -62,7 +62,9 @@ class EmailService:
     
     def send_verification_email(self, email: str, token: str) -> bool:
         """Send email verification email."""
-        verification_url = f"{self.frontend_url}/auth/verify?token={token}"
+        # Use API endpoint for verification (not frontend)
+        api_base_url = os.getenv("API_BASE_URL", "http://api.45.146.164.70.nip.io")
+        verification_url = f"{api_base_url}/api/auth/email/verify?token={token}"
         
         subject = "Verify Your Email Address"
         
