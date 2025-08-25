@@ -2,6 +2,8 @@
 
 A comprehensive guide to build and run the AI E-Learning Platform locally for development.
 
+> 📚 **New Developer?** Check out the [**Developer Guide**](./DEVELOPER_GUIDE.md) for a complete overview including architecture, debugging, and production deployment. Also see the [**Debug Cheat Sheet**](./DEBUG_CHEATSHEET.md) for quick troubleshooting commands.
+
 ## 📋 Table of Contents
 
 1. [Prerequisites](#prerequisites)
