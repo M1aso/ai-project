@@ -28,55 +28,110 @@ jobs:
       
       - name: Install Python dependencies
         run: |
-          pip install fastapi uvicorn sqlalchemy psycopg2-binary redis
+          pip install fastapi uvicorn sqlalchemy psycopg2-binary redis jinja2
           pip install -r requirements.txt
+          # Install service-specific requirements
+          pip install -r services/notifications/requirements.txt
       
-      - name: Start Auth Service for OpenAPI generation
+      - name: Start Services for OpenAPI Generation
         run: |
+          echo "🚀 Starting services for OpenAPI generation..."
+          
+          # Start Auth Service
           cd services/auth
-          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
-          sleep 5
-      
-      - name: Start Profile Service for OpenAPI generation
-        run: |
-          cd services/profile
-          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 &
-          sleep 5
-      
-      - name: Start Analytics Service for OpenAPI generation
-        run: |
-          cd services/analytics
-          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
-          sleep 5
-      
-      - name: Start Notifications Service for OpenAPI generation
-        run: |
-          cd services/notifications
-          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 &
-          sleep 5
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          AUTH_PID=$!
+          echo "🔐 Auth service started with PID: $AUTH_PID"
+          
+          # Start Profile Service
+          cd ../profile
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 &
+          PROFILE_PID=$!
+          echo "👤 Profile service started with PID: $PROFILE_PID"
+          
+          # Start Analytics Service
+          cd ../analytics
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
+          ANALYTICS_PID=$!
+          echo "📊 Analytics service started with PID: $ANALYTICS_PID"
+          
+          # Start Notifications Service
+          cd ../notifications
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 &
+          NOTIFICATIONS_PID=$!
+          echo "📢 Notifications service started with PID: $NOTIFICATIONS_PID"
+          
+          # Wait for services to be ready
+          echo "⏳ Waiting for services to be ready..."
+          sleep 10
+          
+          # Health check all services
+          echo "🔍 Health checking services..."
+          for port in 8001 8002 8003 8004; do
+            echo "Checking port $port..."
+            timeout 10s bash -c "until curl -s http://localhost:$port/healthz > /dev/null; do sleep 1; done" || echo "Service on port $port not ready"
+          done
+          
+          echo "✅ All services started and ready for OpenAPI generation"
       
       # Lint live OpenAPI specs from running services
       - name: Lint Live OpenAPI Specs
         run: |
           echo "🔍 Linting live OpenAPI specs from running services..."
           
-          # Wait for services to be ready
-          sleep 10
+          # Additional wait to ensure services are fully ready
+          sleep 5
           
-          # Lint each service's live OpenAPI spec
+          # Test OpenAPI endpoints before linting
+          echo "🧪 Testing OpenAPI endpoints availability..."
+          for port in 8001 8002 8003 8004; do
+            echo "Testing port $port..."
+            curl -s "http://localhost:$port/healthz" || echo "Health check failed for port $port"
+          done
+          
+          # Lint each service's live OpenAPI spec with better error handling
           echo "🔐 Linting Auth Service OpenAPI spec..."
-          spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8001/api/auth/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+            echo "✅ Auth service OpenAPI spec validated"
+          else
+            echo "❌ Auth service OpenAPI endpoint not accessible"
+            exit 1
+          fi
           
           echo "👤 Linting Profile Service OpenAPI spec..."
-          spectral lint "http://localhost:8002/api/profile/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8002/api/profile/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8002/api/profile/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+            echo "✅ Profile service OpenAPI spec validated"
+          else
+            echo "❌ Profile service OpenAPI endpoint not accessible"
+            exit 1
+          fi
           
           echo "📊 Linting Analytics Service OpenAPI spec..."
-          spectral lint "http://localhost:8003/api/analytics/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8003/api/analytics/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8003/api/analytics/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+            echo "✅ Analytics service OpenAPI spec validated"
+          else
+            echo "❌ Analytics service OpenAPI endpoint not accessible"
+            exit 1
+          fi
           
           echo "📢 Linting Notifications Service OpenAPI spec..."
-          spectral lint "http://localhost:8004/api/notifications/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8004/api/notifications/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8004/api/notifications/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+            echo "✅ Notifications service OpenAPI spec validated"
+          else
+            echo "❌ Notifications service OpenAPI endpoint not accessible"
+            exit 1
+          fi
           
-          echo "✅ All live OpenAPI specs passed validation!"
+          echo "🎉 All live OpenAPI specs passed validation!"
+          
+          # Cleanup: Stop all services
+          echo "🧹 Cleaning up services..."
+          kill $AUTH_PID $PROFILE_PID $ANALYTICS_PID $NOTIFICATIONS_PID 2>/dev/null || true
+          echo "✅ Services cleaned up"
 
   unit_tests:
     needs: contracts_lint
