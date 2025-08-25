@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: "ghcr.io/M1aso/profile"
+  repository: "ghcr.io/m1aso/{{ .Chart.Name }}"
   tag: "latest"
   pullPolicy: IfNotPresent
 
@@ -38,11 +38,14 @@ hpa:
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70
 
-env:
-  - name: MINIO_ENDPOINT
-    value: "minio:9000"
-  - name: MINIO_BUCKET
-    value: "avatars"
+env: []  # e.g. [{ name: SOME_VAR, value: "value" }]
+
+# Migration Configuration
+migrations:
+  enabled: true
+  timeout: 300  # 5 minutes
+  retries: 3
+  waitForDatabase: true
 
 ingress:
   enabled: false

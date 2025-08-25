@@ -23,7 +23,7 @@ spec:
       {{- end }}
       containers:
         - name: migration
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command: ["/bin/sh"]
           args:
             - -c
@@ -33,10 +33,7 @@ spec:
               alembic -c app/db/migrations/alembic.ini upgrade head
               echo "Migration completed successfully"
           env:
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
+{{- toYaml .Values.env | nindent 12 }}
           resources:
             requests:
               cpu: 100m
