@@ -315,7 +315,7 @@ jobs:
           
           # Deploy core services first (those with migrations)
           echo "🔧 Deploying core services with migrations..."
-          for svc in auth profile content notifications; do
+          for svc in auth profile analytics notifications; do
             echo "🔄 Deploying $svc..."
             
             # Run migration job first for services that need it
@@ -397,7 +397,7 @@ jobs:
           
           # Deploy remaining services
           echo "🔧 Deploying remaining services..."
-          for svc in chat analytics content-worker; do
+          for svc in content chat content-worker; do
             echo "🔄 Deploying $svc..."
             VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
             if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
