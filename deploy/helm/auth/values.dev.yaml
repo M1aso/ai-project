@@ -84,3 +84,19 @@ env:
     value: "10"
   - name: DB_MAX_OVERFLOW
     value: "20"
+  
+  # SMTP Email Configuration (for development)
+  - name: SMTP_HOST
+    value: "localhost"  # Will fail gracefully in dev
+  - name: SMTP_PORT
+    value: "1025"
+  - name: SMTP_USERNAME
+    value: ""
+  - name: SMTP_PASSWORD
+    value: ""
+  - name: SMTP_USE_TLS
+    value: "false"
+  - name: FROM_EMAIL
+    value: "noreply@aiproject-dev.com"
+  - name: FRONTEND_URL
+    value: "http://docs.45.146.164.70.nip.io"
