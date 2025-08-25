@@ -458,40 +458,7 @@ async def get_current_user_info(
         "is_active": user.is_active,
         "login_type": user.login_type,
         "created_at": user.created_at,
-        "updated_at": user.updated_at,
         "message": "Authentication successful!"
-    }
-
-
-@router.get("/profile")
-async def get_user_profile(
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get detailed user profile (requires authentication)."""
-    # Get user from database using the user_id from JWT
-    user = db.query(models.User).filter_by(id=current_user["user_id"]).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Get additional user data
-    verification_count = db.query(models.EmailVerification).filter_by(user_id=user.id).count()
-    
-    return {
-        "profile": {
-            "user_id": user.id,
-            "email": user.email,
-            "phone": user.phone,
-            "is_active": user.is_active,
-            "login_type": user.login_type,
-            "created_at": user.created_at,
-            "updated_at": user.updated_at
-        },
-        "stats": {
-            "pending_verifications": verification_count,
-            "account_age_days": (datetime.now(timezone.utc) - user.created_at.replace(tzinfo=timezone.utc)).days
-        },
-        "message": "Profile retrieved successfully"
     }
 
 

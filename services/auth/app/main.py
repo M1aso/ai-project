@@ -101,7 +101,7 @@ app = FastAPI(
 This service provides:
 - 🔐 **User Registration & Email Verification**
 - 🔑 **JWT-based Authentication** (Access & Refresh Tokens)
-- 👤 **User Profile Management**
+- 👤 **User Authentication Info**
 - 🛡️ **Rate Limiting & Security**
 - 📊 **Session Management**
 

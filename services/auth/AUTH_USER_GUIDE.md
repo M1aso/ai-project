@@ -25,7 +25,7 @@ Your authentication service provides secure user authentication with two sets of
 - `DELETE /api/auth/sessions/{session_id}` - Revoke session
 - `POST /api/auth/password/reset/request` - Password reset
 - `POST /api/auth/password/reset/confirm` - Confirm reset
-- `GET /api/auth/profile` - Protected profile endpoint
+- `GET /api/auth/me` - Get current user authentication info
 
 #### **Legacy Endpoints** (Basic - `/api/auth/email/`)
 - `POST /api/auth/email/register` - Basic registration
