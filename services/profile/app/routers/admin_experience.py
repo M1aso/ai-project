@@ -1,21 +1,12 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..db.database import get_db
 from ..db.models import ExperienceLevel
 from ..schemas import ExperienceLevelCreate, ExperienceLevelRead
 
 router = APIRouter(prefix="/api/admin/experience-levels", tags=["experience"])
-
-
-def get_current_user(authorization: str = Header(...)):
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="invalid token")
-    token = parts[1]
-    user_id, _, roles_part = token.partition(":")
-    roles = roles_part.split(",") if roles_part else []
-    return {"sub": user_id, "roles": roles}
 
 
 def require_admin(user=Depends(get_current_user)):

@@ -1,0 +1,51 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "svc.fullname" . }}-migration
+  labels:
+    app: {{ include "svc.fullname" . }}
+    component: migration
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ include "svc.fullname" . }}
+        component: migration
+    spec:
+      restartPolicy: Never
+      {{- if .Values.migrations.serviceAccountName }}
+      serviceAccountName: {{ .Values.migrations.serviceAccountName }}
+      {{- end }}
+      containers:
+        - name: migration
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              echo "Starting database migration..."
+              cd /app
+              alembic -c app/db/migrations/alembic.ini upgrade head
+              echo "Migration completed successfully"
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

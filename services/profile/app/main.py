@@ -55,6 +55,8 @@ app.add_middleware(MetricsMiddleware)
 app.include_router(profile.router)
 app.include_router(avatar.router)
 app.include_router(admin_experience.router)
+from .routers import social_bindings
+app.include_router(social_bindings.router)
 
 
 @app.get("/healthz")
