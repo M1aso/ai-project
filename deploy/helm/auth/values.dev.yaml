@@ -113,6 +113,6 @@ env:
 # Migration Configuration
 migrations:
   enabled: true
-  timeout: 300
-  retries: 3
+  timeout: 120  # 2 minutes for dev (reduced from 5 minutes)
+  retries: 2    # Reduced retries for dev
   waitForDatabase: true

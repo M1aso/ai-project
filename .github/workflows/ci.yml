@@ -184,6 +184,7 @@ jobs:
     needs: build_and_push
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 60  # 1 hour timeout for entire deployment job
     environment: dev
     permissions:
       contents: read
@@ -248,22 +249,82 @@ jobs:
         env:
           ENV: dev
           NS: dev
+        timeout-minutes: 30  # Explicit timeout for deployment step
         run: |
           set -euo pipefail
-          for svc in auth profile content notifications chat analytics content-worker; do
+          
+          echo "🚀 Starting deployment of all services..."
+          echo "📊 Services to deploy: auth, profile, content, notifications, chat, analytics, content-worker, swagger-ui"
+          
+          # Track deployment progress
+          DEPLOYED_SERVICES=()
+          FAILED_SERVICES=()
+          
+          # Deploy core services first (those with migrations)
+          echo "🔧 Deploying core services with migrations..."
+          for svc in auth profile content notifications; do
+            echo "🔄 Deploying $svc..."
             VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
             if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
-            helm upgrade --install "$svc" "deploy/helm/$svc" \
+            
+            if helm upgrade --install "$svc" "deploy/helm/$svc" \
               --namespace "$NS" --create-namespace \
               --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
               --set "image.tag=${{ github.sha }}" \
-              "${EXTRA_VALUES[@]}"
+              --timeout 10m \
+              "${EXTRA_VALUES[@]}"; then
+              echo "✅ $svc deployed successfully"
+              DEPLOYED_SERVICES+=("$svc")
+            else
+              echo "❌ $svc deployment failed"
+              FAILED_SERVICES+=("$svc")
+            fi
+          done
+          
+          # Deploy remaining services
+          echo "🔧 Deploying remaining services..."
+          for svc in chat analytics content-worker; do
+            echo "🔄 Deploying $svc..."
+            VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
+            if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
+            
+            if helm upgrade --install "$svc" "deploy/helm/$svc" \
+              --namespace "$NS" --create-namespace \
+              --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
+              --set "image.tag=${{ github.sha }}" \
+              --timeout 5m \
+              "${EXTRA_VALUES[@]}"; then
+              echo "✅ $svc deployed successfully"
+              DEPLOYED_SERVICES+=("$svc")
+            else
+              echo "❌ $svc deployment failed"
+              FAILED_SERVICES+=("$svc")
+            fi
           done
           
           # Deploy Swagger UI separately (uses public image)
-          helm upgrade --install swagger-ui deploy/helm/swagger-ui \
+          echo "🔄 Deploying swagger-ui..."
+          if helm upgrade --install swagger-ui deploy/helm/swagger-ui \
             --namespace "$NS" --create-namespace \
-            -f deploy/helm/swagger-ui/values.dev.yaml
+            -f deploy/helm/swagger-ui/values.dev.yaml \
+            --timeout 3m; then
+            echo "✅ swagger-ui deployed successfully"
+            DEPLOYED_SERVICES+=("swagger-ui")
+          else
+            echo "❌ swagger-ui deployment failed"
+            FAILED_SERVICES+=("swagger-ui")
+          fi
+          
+          # Report deployment results
+          echo "📊 Deployment Summary:"
+          echo "✅ Successfully deployed: ${DEPLOYED_SERVICES[*]:-none}"
+          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+            echo "❌ Failed services: ${FAILED_SERVICES[*]}"
+            echo "::error::Some services failed to deploy"
+            exit 1
+          else
+            echo "🎉 All services deployed successfully!"
+          fi
 
       - name: Restart deployments to pick up ConfigMap changes
         env:
