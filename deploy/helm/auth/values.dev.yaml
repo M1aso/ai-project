@@ -87,7 +87,7 @@ env:
   
   # SMTP Email Configuration (for development)
   - name: SMTP_HOST
-    value: "localhost"  # Will fail gracefully in dev
+    value: "mailhog.dev.svc.cluster.local"  # MailHog service
   - name: SMTP_PORT
     value: "1025"
   - name: SMTP_USERNAME
