@@ -6,8 +6,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-sys.path.append(str(Path(__file__).resolve().parents[5]))
-from services.analytics.app.db import models  # noqa: E402,F401
+# Add the app root to Python path for imports
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+from app.db import models  # noqa: E402,F401
 
 config = context.config
 

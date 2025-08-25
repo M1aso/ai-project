@@ -23,12 +23,15 @@ spec:
                 export PYTHONPATH=/app
                 alembic upgrade head
               elif [ "{{ .Values.serviceName }}" = "content" ]; then
-                echo "Running Go migration..."
-                cd /app/internal/db/migrations
-                # For Go services, we'd typically use a migration tool like goose or migrate
-                echo "Go migrations not implemented yet - skipping"
+                echo "Skipping Go migration - not implemented yet"
+                echo "Content service uses manual SQL migrations"
+              elif [ "{{ .Values.serviceName }}" = "chat" ]; then
+                echo "Skipping Node.js migration - not implemented yet"  
+                echo "Chat service uses manual SQL migrations"
+              elif [ "{{ .Values.serviceName }}" = "notifications" ] || [ "{{ .Values.serviceName }}" = "content-worker" ]; then
+                echo "No database migrations needed for {{ .Values.serviceName }}"
               else
-                echo "No migrations needed for {{ .Values.serviceName }}"
+                echo "Unknown service type for {{ .Values.serviceName }}"
               fi
               
               echo "✅ Migration completed successfully for {{ .Values.serviceName }}"

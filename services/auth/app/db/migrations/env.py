@@ -1,14 +1,15 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[5]))
+# Add the app root to Python path for imports
+sys.path.append(str(Path(__file__).resolve().parents[3]))
 from logging.config import fileConfig
 import os
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from services.auth.app.db import models  # noqa: F401
+from app.db import models  # noqa: F401
 
 config = context.config
 

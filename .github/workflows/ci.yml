@@ -319,7 +319,7 @@ jobs:
             echo "🔄 Deploying $svc..."
             
             # Run migration job first for services that need it
-            if [ "$svc" = "auth" ] || [ "$svc" = "profile" ] || [ "$svc" = "content" ]; then
+            if [ "$svc" = "auth" ] || [ "$svc" = "profile" ] || [ "$svc" = "analytics" ]; then
               echo "🗄️ Running migration job for $svc..."
               
               # Delete existing migration job if it exists
