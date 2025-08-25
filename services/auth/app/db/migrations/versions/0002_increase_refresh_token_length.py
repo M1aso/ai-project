@@ -18,17 +18,83 @@ depends_on = None
 
 def upgrade():
     """Increase refresh token column length to accommodate JWT tokens."""
-    # Increase token column from VARCHAR(64) to VARCHAR(512) to accommodate JWT tokens
-    op.alter_column('refresh_tokens', 'token',
-                   existing_type=sa.VARCHAR(length=64),
-                   type_=sa.VARCHAR(length=512),
-                   existing_nullable=False)
+    # Get database dialect to handle different database types
+    connection = op.get_bind()
+    dialect = connection.dialect.name
+    
+    if dialect == 'postgresql':
+        # PostgreSQL supports ALTER COLUMN
+        op.alter_column('refresh_tokens', 'token',
+                       existing_type=sa.VARCHAR(length=64),
+                       type_=sa.VARCHAR(length=512),
+                       existing_nullable=False,
+                       postgresql_using='token::varchar(512)')
+    elif dialect == 'sqlite':
+        # SQLite doesn't support ALTER COLUMN, so we need to recreate the table
+        # Create new table with correct schema
+        op.create_table('refresh_tokens_new',
+                       sa.Column('id', sa.Integer(), nullable=False),
+                       sa.Column('token', sa.VARCHAR(length=512), nullable=False),
+                       sa.Column('user_id', sa.UUID(), nullable=False),
+                       sa.Column('expires_at', sa.DateTime(), nullable=False),
+                       sa.Column('created_at', sa.DateTime(), nullable=False),
+                       sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+                       sa.PrimaryKeyConstraint('id'),
+                       sa.UniqueConstraint('token')
+                       )
+        
+        # Copy data from old table to new table
+        op.execute('INSERT INTO refresh_tokens_new SELECT * FROM refresh_tokens')
+        
+        # Drop old table
+        op.drop_table('refresh_tokens')
+        
+        # Rename new table to original name
+        op.rename_table('refresh_tokens_new', 'refresh_tokens')
+    else:
+        # For other databases, try the standard approach
+        op.alter_column('refresh_tokens', 'token',
+                       existing_type=sa.VARCHAR(length=64),
+                       type_=sa.VARCHAR(length=512),
+                       existing_nullable=False)
 
 
 def downgrade():
     """Revert refresh token column length back to 64 characters."""
-    # Note: This may cause data loss if there are tokens longer than 64 characters
-    op.alter_column('refresh_tokens', 'token',
-                   existing_type=sa.VARCHAR(length=512),
-                   type_=sa.VARCHAR(length=64),
-                   existing_nullable=False)
+    connection = op.get_bind()
+    dialect = connection.dialect.name
+    
+    if dialect == 'postgresql':
+        # PostgreSQL supports ALTER COLUMN
+        op.alter_column('refresh_tokens', 'token',
+                       existing_type=sa.VARCHAR(length=512),
+                       type_=sa.VARCHAR(length=64),
+                       existing_nullable=False,
+                       postgresql_using='token::varchar(64)')
+    elif dialect == 'sqlite':
+        # SQLite requires table recreation
+        op.create_table('refresh_tokens_old',
+                       sa.Column('id', sa.Integer(), nullable=False),
+                       sa.Column('token', sa.VARCHAR(length=64), nullable=False),
+                       sa.Column('user_id', sa.UUID(), nullable=False),
+                       sa.Column('expires_at', sa.DateTime(), nullable=False),
+                       sa.Column('created_at', sa.DateTime(), nullable=False),
+                       sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+                       sa.PrimaryKeyConstraint('id'),
+                       sa.UniqueConstraint('token')
+                       )
+        
+        # Copy data from current table to old table (truncating tokens > 64 chars)
+        op.execute('INSERT INTO refresh_tokens_old SELECT id, substr(token, 1, 64) as token, user_id, expires_at, created_at FROM refresh_tokens')
+        
+        # Drop current table
+        op.drop_table('refresh_tokens')
+        
+        # Rename old table to original name
+        op.rename_table('refresh_tokens_old', 'refresh_tokens')
+    else:
+        # For other databases, try the standard approach
+        op.alter_column('refresh_tokens', 'token',
+                       existing_type=sa.VARCHAR(length=512),
+                       type_=sa.VARCHAR(length=64),
+                       existing_nullable=False)
