@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import event
 
 Base = declarative_base()
 
@@ -20,6 +21,15 @@ class User(Base):
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+@event.listens_for(User, 'before_update')
+def update_updated_at(mapper, connection, target):
+    """Automatically update the updated_at field before any update."""
+    target.updated_at = datetime.now(timezone.utc)
 
 
 class EmailVerification(Base):

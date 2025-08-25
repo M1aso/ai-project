@@ -458,6 +458,7 @@ async def get_current_user_info(
         "is_active": user.is_active,
         "login_type": user.login_type,
         "created_at": user.created_at,
+        "updated_at": user.updated_at,
         "message": "Authentication successful!"
     }
 
@@ -483,7 +484,8 @@ async def get_user_profile(
             "phone": user.phone,
             "is_active": user.is_active,
             "login_type": user.login_type,
-            "created_at": user.created_at
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
         },
         "stats": {
             "pending_verifications": verification_count,
