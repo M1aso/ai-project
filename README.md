@@ -53,6 +53,18 @@ A comprehensive microservices-based e-learning platform featuring authentication
 - **💬 Chat API**: http://api.45.146.164.70.nip.io/api/chat
 - **📊 Analytics API**: http://api.45.146.164.70.nip.io/api/analytics
 
+## 📚 API Documentation
+
+Each service now **dynamically generates** its OpenAPI specification and exposes it at `/api/{service}/openapi.json` with Swagger UI at `/api/{service}/docs`.
+
+**Centralized Documentation**: All services are available at [http://docs.45.146.164.70.nip.io](http://docs.45.146.164.70.nip.io) with live, always-up-to-date API specs.
+
+**Benefits:**
+- ✅ **Zero maintenance** - documentation automatically syncs with code
+- ✅ **Always accurate** - no more outdated YAML files
+- ✅ **Professional UI** - categorized endpoints with proper examples
+- ✅ **Interactive testing** - test APIs directly from documentation
+
 ### Infrastructure Services
 - **📊 Grafana**: http://grafana.45.146.164.70.nip.io (admin/admin123)
 - **💾 MinIO Console**: http://minio.45.146.164.70.nip.io (admin/admin123456)

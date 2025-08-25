@@ -15,7 +15,40 @@ async def lifespan(app: FastAPI):
     # Shutdown - add any cleanup here if needed
 
 
-app = FastAPI(title="Profile Service", lifespan=lifespan)
+app = FastAPI(
+    title="AI Project - Profile Service",
+    description="""
+## User Profile Management Service
+
+This service provides:
+- 👤 **User Profile Management**
+- 🖼️ **Avatar Upload & Management** 
+- 👑 **Admin Experience Features**
+- 📊 **Profile Analytics**
+
+### Authentication
+Most endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+    """,
+    version="1.0.0",
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "Profile",
+            "description": "User profile management operations"
+        },
+        {
+            "name": "Avatar", 
+            "description": "Avatar upload and management"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin experience and management features"
+        }
+    ]
+)
 app.add_middleware(MetricsMiddleware)
 
 # Include routers
@@ -41,3 +74,19 @@ def readyz():
 @app.get("/metrics")
 def metrics_endpoint():
     return metrics()
+
+
+@app.get("/api/profile/openapi.json")
+def get_openapi():
+    """Custom OpenAPI endpoint to work with API gateway prefix rewriting."""
+    return app.openapi()
+
+
+@app.get("/api/profile/docs")  
+def get_docs():
+    """Custom docs endpoint to work with API gateway prefix rewriting."""
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url="/api/profile/openapi.json",
+        title=app.title + " - Swagger UI",
+    )

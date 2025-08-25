@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta, timezone
 
 from ..security.middleware import (
     get_current_user, 
@@ -28,7 +30,20 @@ except ImportError:
     # Fallback to the existing database setup
     from ..routers.email import get_db
 
-router = APIRouter(prefix="/api/auth", dependencies=[Depends(check_auth_rate_limit)])
+# Security scheme for Swagger UI
+security = HTTPBearer()
+
+router = APIRouter(
+    prefix="/api/auth",
+    tags=["Authentication"],
+    dependencies=[Depends(check_auth_rate_limit)],
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Insufficient permissions"},
+        429: {"description": "Rate limit exceeded"},
+        500: {"description": "Internal server error"}
+    }
+)
 
 
 def get_client_info(request: Request, user_agent: str = Header(None)) -> Dict[str, Any]:
@@ -48,14 +63,35 @@ def get_client_info(request: Request, user_agent: str = Header(None)) -> Dict[st
     }
 
 
-@router.post("/email/register")
+@router.post(
+    "/email/register",
+    summary="Register new user",
+    description="Register a new user account with email and password. Sends verification email.",
+    response_description="Registration successful, verification email sent",
+    tags=["Public Endpoints"],
+    responses={
+        200: {
+            "description": "Registration successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Registration successful. Please check your email for verification.",
+                        "email": "user@example.com"
+                    }
+                }
+            }
+        },
+        400: {"description": "Email already registered or invalid input"},
+        429: {"description": "Too many registration attempts"}
+    }
+)
 async def secure_register(
     request: Request,
     req: SecureEmailRegisterRequest, 
     db: Session = Depends(get_db),
     user_agent: str = Header(None)
 ):
-    """Secure email registration with enhanced validation."""
+    """Register a new user account with email and password verification."""
     client_info = get_client_info(request, user_agent)
     client_ip = client_info["ip_address"]
     
@@ -123,14 +159,37 @@ async def secure_verify(
         raise HTTPException(status_code=500, detail="Email verification failed")
 
 
-@router.get("/email/verify")
+@router.get(
+    "/email/verify",
+    summary="Verify email address (link)",
+    description="Verify email address by clicking the link in verification email. Returns JWT tokens on success.",
+    response_description="Email verified successfully, user activated",
+    tags=["Public Endpoints"],
+    responses={
+        200: {
+            "description": "Email verified successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "user_id": "f1338a69-aed4-499f-a5ae-214d9cf1c7c6",
+                        "session_id": "02c8e432-1500-4c16-b0ef-f65cf309ea48",
+                        "message": "Email verified successfully! You can now log in."
+                    }
+                }
+            }
+        },
+        400: {"description": "Invalid or expired verification token"}
+    }
+)
 async def verify_email_link(
     token: str,
     request: Request,
     db: Session = Depends(get_db),
     user_agent: str = Header(None)
 ):
-    """Email verification via GET link (for email clicks)."""
+    """Verify email address using the verification token from email link."""
     client_info = get_client_info(request, user_agent)
     
     try:
@@ -357,12 +416,37 @@ async def refresh_token(
 # PROTECTED ENDPOINTS FOR TESTING AUTHENTICATION
 # =============================================================================
 
-@router.get("/me")
+@router.get(
+    "/me",
+    summary="Get current user info",
+    description="Get information about the currently authenticated user. Requires valid JWT token.",
+    response_description="Current user information",
+    tags=["Protected Endpoints"],
+    dependencies=[Depends(security)],
+    responses={
+        200: {
+            "description": "User information retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "user_id": "f1338a69-aed4-499f-a5ae-214d9cf1c7c6",
+                        "email": "user@example.com",
+                        "is_active": True,
+                        "login_type": "email",
+                        "created_at": "2025-08-25T09:20:21.381740+00:00",
+                        "message": "Authentication successful!"
+                    }
+                }
+            }
+        },
+        401: {"description": "Authentication required - invalid or missing JWT token"}
+    }
+)
 async def get_current_user_info(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get current user information (requires authentication)."""
+    """Get information about the currently authenticated user."""
     return {
         "user_id": current_user.id,
         "email": current_user.email,
@@ -399,14 +483,50 @@ async def get_user_profile(
     }
 
 
-@router.get("/admin/users")
+@router.get(
+    "/admin/users",
+    summary="List all users (Admin)",
+    description="Get a paginated list of all users. Requires admin privileges.",
+    response_description="Paginated list of users",
+    tags=["Admin Endpoints"],
+    dependencies=[Depends(security)],
+    responses={
+        200: {
+            "description": "Users retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "users": [
+                            {
+                                "user_id": "f1338a69-aed4-499f-a5ae-214d9cf1c7c6",
+                                "email": "user@example.com",
+                                "is_active": True,
+                                "login_type": "email",
+                                "created_at": "2025-08-25T09:20:21.381740+00:00"
+                            }
+                        ],
+                        "pagination": {
+                            "total": 1,
+                            "limit": 10,
+                            "offset": 0,
+                            "has_more": False
+                        },
+                        "message": "Retrieved 1 users"
+                    }
+                }
+            }
+        },
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin privileges required"}
+    }
+)
 async def list_all_users(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = 10,
     offset: int = 0
 ):
-    """List all users (requires admin privileges)."""
+    """Get a paginated list of all users. Requires admin privileges."""
     users = db.query(models.User).offset(offset).limit(limit).all()
     total_count = db.query(models.User).count()
     
@@ -431,9 +551,29 @@ async def list_all_users(
     }
 
 
-@router.get("/test/public")
+@router.get(
+    "/test/public",
+    summary="Test public endpoint",
+    description="Test endpoint that doesn't require authentication. Used for testing API connectivity.",
+    response_description="Public endpoint response",
+    tags=["Test Endpoints"],
+    responses={
+        200: {
+            "description": "Public endpoint accessible",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "This is a public endpoint - no authentication required",
+                        "timestamp": "2025-08-25T09:58:00.000000+00:00",
+                        "status": "public"
+                    }
+                }
+            }
+        }
+    }
+)
 async def public_endpoint():
-    """Public endpoint (no authentication required)."""
+    """Test endpoint that doesn't require authentication."""
     return {
         "message": "This is a public endpoint - no authentication required",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -441,11 +581,34 @@ async def public_endpoint():
     }
 
 
-@router.get("/test/protected")
+@router.get(
+    "/test/protected",
+    summary="Test protected endpoint",
+    description="Test endpoint that requires JWT authentication. Used for testing authentication flow.",
+    response_description="Protected endpoint response with user info",
+    tags=["Test Endpoints"],
+    dependencies=[Depends(security)],
+    responses={
+        200: {
+            "description": "Protected endpoint accessible with valid authentication",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Hello user@example.com! This endpoint requires authentication.",
+                        "user_id": "f1338a69-aed4-499f-a5ae-214d9cf1c7c6",
+                        "timestamp": "2025-08-25T09:58:00.000000+00:00",
+                        "status": "authenticated"
+                    }
+                }
+            }
+        },
+        401: {"description": "Authentication required - invalid or missing JWT token"}
+    }
+)
 async def protected_endpoint(
     current_user: models.User = Depends(get_current_user)
 ):
-    """Protected endpoint (requires valid JWT token)."""
+    """Test endpoint that requires valid JWT authentication."""
     return {
         "message": f"Hello {current_user.email}! This endpoint requires authentication.",
         "user_id": current_user.id,

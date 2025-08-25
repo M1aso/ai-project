@@ -15,8 +15,68 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: |
-          npx @stoplight/spectral-cli lint "libs/contracts/*.yaml" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error
+      
+      # Install Spectral CLI for OpenAPI validation
+      - name: Install Spectral CLI
+        run: npm install -g @stoplight/spectral-cli
+      
+      # Start services in CI environment to generate live OpenAPI specs
+      - name: Setup Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install fastapi uvicorn sqlalchemy psycopg2-binary redis
+          pip install -r requirements.txt
+      
+      - name: Start Auth Service for OpenAPI generation
+        run: |
+          cd services/auth
+          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          sleep 5
+      
+      - name: Start Profile Service for OpenAPI generation
+        run: |
+          cd services/profile
+          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 &
+          sleep 5
+      
+      - name: Start Analytics Service for OpenAPI generation
+        run: |
+          cd services/analytics
+          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
+          sleep 5
+      
+      - name: Start Notifications Service for OpenAPI generation
+        run: |
+          cd services/notifications
+          timeout 30s python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 &
+          sleep 5
+      
+      # Lint live OpenAPI specs from running services
+      - name: Lint Live OpenAPI Specs
+        run: |
+          echo "🔍 Linting live OpenAPI specs from running services..."
+          
+          # Wait for services to be ready
+          sleep 10
+          
+          # Lint each service's live OpenAPI spec
+          echo "🔐 Linting Auth Service OpenAPI spec..."
+          spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          
+          echo "👤 Linting Profile Service OpenAPI spec..."
+          spectral lint "http://localhost:8002/api/profile/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          
+          echo "📊 Linting Analytics Service OpenAPI spec..."
+          spectral lint "http://localhost:8003/api/analytics/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          
+          echo "📢 Linting Notifications Service OpenAPI spec..."
+          spectral lint "http://localhost:8004/api/notifications/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          
+          echo "✅ All live OpenAPI specs passed validation!"
 
   unit_tests:
     needs: contracts_lint

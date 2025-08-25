@@ -22,7 +22,36 @@ async def lifespan(app: FastAPI):
     # Shutdown - add any cleanup here if needed
 
 
-app = FastAPI(title="Analytics Service", lifespan=lifespan)
+app = FastAPI(
+    title="AI Project - Analytics Service",
+    description="""
+## Analytics and Event Tracking Service
+
+This service provides:
+- 📊 **Event Ingestion** - Collect user behavior events
+- 📈 **Analytics Reports** - Generate insights and metrics
+- 🎯 **Real-time Tracking** - Live event processing
+- 📋 **Data Export** - Export analytics data
+
+### Authentication
+Most endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+    """,
+    version="1.0.0",
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "Event Ingestion",
+            "description": "Collect and process user events"
+        },
+        {
+            "name": "Reports",
+            "description": "Generate analytics reports and insights"
+        }
+    ]
+)
 
 # Include routers
 app.include_router(ingest.router)
@@ -69,3 +98,19 @@ def readyz():
 @app.get("/metrics")
 def metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/api/analytics/openapi.json")
+def get_openapi():
+    """Custom OpenAPI endpoint to work with API gateway prefix rewriting."""
+    return app.openapi()
+
+
+@app.get("/api/analytics/docs")  
+def get_docs():
+    """Custom docs endpoint to work with API gateway prefix rewriting."""
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url="/api/analytics/openapi.json",
+        title=app.title + " - Swagger UI",
+    )

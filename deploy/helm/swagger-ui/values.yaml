@@ -23,18 +23,18 @@ resources:
     cpu: 100m
     memory: 128Mi
 
-# Swagger UI configuration
+# Swagger UI configuration - Dynamic OpenAPI specs from live services
 swaggerConfig:
   urls:
-    - url: "/specs/auth.yaml"
-      name: "Auth API"
-    - url: "/specs/profile.yaml"
-      name: "Profile API"
-    - url: "/specs/content.yaml"
-      name: "Content API"
-    - url: "/specs/notifications.yaml"
-      name: "Notifications API"
-    - url: "/specs/chat.yaml"
-      name: "Chat API"
-    - url: "/specs/analytics.yaml"
-      name: "Analytics API"
+    - url: "http://api.45.146.164.70.nip.io/api/auth/openapi.json"
+      name: "🔐 Auth Service"
+    - url: "http://api.45.146.164.70.nip.io/api/profile/openapi.json"
+      name: "👤 Profile Service"
+    - url: "http://api.45.146.164.70.nip.io/api/content/openapi.json"
+      name: "📁 Content Service"
+    - url: "http://api.45.146.164.70.nip.io/api/notifications/openapi.json"
+      name: "📢 Notifications Service"
+    - url: "http://api.45.146.164.70.nip.io/api/chats/openapi.json"
+      name: "💬 Chat Service"
+    - url: "http://api.45.146.164.70.nip.io/api/analytics/openapi.json"
+      name: "📊 Analytics Service"

@@ -350,19 +350,26 @@ done
 
 ### 4.2. API Documentation (Swagger/OpenAPI)
 
-The OpenAPI specifications are available in the `libs/contracts/` directory:
-- **Auth API Spec**: `libs/contracts/auth.yaml`
-- **Profile API Spec**: `libs/contracts/profile.yaml`
-- **Content API Spec**: `libs/contracts/content.yaml`
-- **Notifications API Spec**: `libs/contracts/notifications.yaml`
-- **Chat API Spec**: `libs/contracts/chat.yaml`
-- **Analytics API Spec**: `libs/contracts/analytics.yaml`
+The OpenAPI specifications are now **dynamically generated** by each service and available at:
+
+- **🔐 Auth Service**: `http://api.45.146.164.70.nip.io/api/auth/openapi.json`
+- **👤 Profile Service**: `http://api.45.146.164.70.nip.io/api/profile/openapi.json`
+- **📁 Content Service**: `http://api.45.146.164.70.nip.io/api/content/openapi.json`
+- **📢 Notifications Service**: `http://api.45.146.164.70.nip.io/api/notifications/openapi.json`
+- **💬 Chat Service**: `http://api.45.146.164.70.nip.io/api/chats/openapi.json`
+- **📊 Analytics Service**: `http://api.45.146.164.70.nip.io/api/analytics/openapi.json`
+
+**Benefits of Dynamic Specs:**
+- ✅ **Always up-to-date** with actual code
+- ✅ **Zero maintenance** required
+- ✅ **Automatic synchronization** with implementation
+- ✅ **Professional documentation** with proper categorization
 
 To serve Swagger UI, you can use:
 ```bash
 # Serve Swagger UI for all APIs
 docker run -d -p 8080:8080 \
-  -v $(pwd)/libs/contracts:/usr/share/nginx/html/specs \
+  # Note: Static specs no longer needed - using dynamic OpenAPI generation
   -e URLS="[{url: '/specs/auth.yaml', name: 'Auth API'}, {url: '/specs/profile.yaml', name: 'Profile API'}, {url: '/specs/content.yaml', name: 'Content API'}, {url: '/specs/notifications.yaml', name: 'Notifications API'}, {url: '/specs/chat.yaml', name: 'Chat API'}, {url: '/specs/analytics.yaml', name: 'Analytics API'}]" \
   swaggerapi/swagger-ui
 

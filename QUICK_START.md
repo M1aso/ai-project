@@ -190,7 +190,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 For detailed information, see:
 - **DEPLOYMENT.md**: Complete deployment guide
 - **REQUIREMENTS.md**: Project requirements and architecture
-- **libs/contracts/**: OpenAPI specifications
+- **libs/contracts/**: OpenAPI validation rules (Spectral configuration)
 
 ## 🎯 Success Indicators
 

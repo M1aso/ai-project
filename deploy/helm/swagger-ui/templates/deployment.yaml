@@ -26,11 +26,3 @@ spec:
               value: {{ .Values.swaggerConfig.urls | toJson | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            - name: specs
-              mountPath: /usr/share/nginx/html/specs
-              readOnly: true
-      volumes:
-        - name: specs
-          configMap:
-            name: {{ include "swagger-ui.fullname" . }}-specs

@@ -12,7 +12,104 @@ interface Client {
 }
 
 const app = express();
+app.use(express.json());
+
+// OpenAPI specification for Chat Service
+const openAPISpec = {
+  openapi: '3.0.0',
+  info: {
+    title: 'AI Project - Chat Service',
+    description: 'Real-time chat service with WebSocket support for messaging and presence',
+    version: '1.0.0',
+  },
+  servers: [
+    { url: 'http://api.45.146.164.70.nip.io', description: 'Development server' }
+  ],
+  paths: {
+    '/api/chats/healthz': {
+      get: {
+        tags: ['Health'],
+        summary: 'Health check',
+        description: 'Check if the chat service is healthy',
+        responses: {
+          '200': {
+            description: 'Service is healthy',
+            content: {
+              'text/plain': {
+                example: 'OK'
+              }
+            }
+          }
+        }
+      }
+    },
+    '/ws': {
+      get: {
+        tags: ['WebSocket'],
+        summary: 'WebSocket connection',
+        description: 'Establish WebSocket connection for real-time chat',
+        parameters: [
+          {
+            name: 'token',
+            in: 'query',
+            description: 'JWT authentication token',
+            required: true,
+            schema: { type: 'string' }
+          },
+          {
+            name: 'roomId',
+            in: 'query',
+            description: 'Chat room ID to join',
+            required: false,
+            schema: { type: 'string', default: 'lobby' }
+          }
+        ],
+        responses: {
+          '101': { description: 'Switching Protocols - WebSocket connection established' },
+          '401': { description: 'Unauthorized - Invalid JWT token' }
+        }
+      }
+    }
+  },
+  tags: [
+    { name: 'Health', description: 'Health check operations' },
+    { name: 'WebSocket', description: 'Real-time WebSocket operations' },
+    { name: 'Chat', description: 'Chat messaging operations' },
+    { name: 'Presence', description: 'User presence and status' }
+  ]
+};
+
 app.get('/healthz', (_req, res) => res.send('OK'));
+
+// OpenAPI endpoints
+app.get('/api/chats/openapi.json', (_req, res) => {
+  res.json(openAPISpec);
+});
+
+app.get('/api/chats/docs', (_req, res) => {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Service - Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+    <script>
+        SwaggerUIBundle({
+            url: '/api/chats/openapi.json',
+            dom_id: '#swagger-ui',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.presets.standalone
+            ]
+        });
+    </script>
+</body>
+</html>`;
+  res.send(html);
+});
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });

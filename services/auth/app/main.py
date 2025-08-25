@@ -19,10 +19,53 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Auth Service",
-    description="Secure Authentication Service with JWT and Session Management",
+    title="AI Project - Authentication Service",
+    description="""
+## Secure Authentication Service with JWT and Session Management
+
+This service provides:
+- 🔐 **User Registration & Email Verification**
+- 🔑 **JWT-based Authentication** (Access & Refresh Tokens)
+- 👤 **User Profile Management**
+- 🛡️ **Rate Limiting & Security**
+- 📊 **Session Management**
+
+### Authentication
+Most endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Endpoint Categories
+- **Public Endpoints**: No authentication required (registration, verification, etc.)
+- **Protected Endpoints**: Require valid JWT token
+- **Admin Endpoints**: Require admin privileges
+- **Test Endpoints**: For testing authentication flow
+    """,
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "Public Endpoints",
+            "description": "Endpoints that don't require authentication"
+        },
+        {
+            "name": "Protected Endpoints", 
+            "description": "Endpoints that require valid JWT authentication"
+        },
+        {
+            "name": "Admin Endpoints",
+            "description": "Endpoints that require admin privileges"
+        },
+        {
+            "name": "Test Endpoints",
+            "description": "Test endpoints for development and debugging"
+        },
+        {
+            "name": "Authentication",
+            "description": "Core authentication operations"
+        }
+    ]
 )
 
 # Add security middleware
@@ -62,3 +105,19 @@ def readyz():
 @app.get("/metrics")
 def metrics_endpoint():
     return metrics()
+
+
+@app.get("/api/auth/openapi.json")
+def get_openapi():
+    """Custom OpenAPI endpoint to work with API gateway prefix rewriting."""
+    return app.openapi()
+
+
+@app.get("/api/auth/docs")  
+def get_docs():
+    """Custom docs endpoint to work with API gateway prefix rewriting."""
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url="/api/auth/openapi.json",
+        title=app.title + " - Swagger UI",
+    )
