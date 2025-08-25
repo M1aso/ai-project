@@ -42,8 +42,7 @@ spec:
             {{- if .Values.migrations.env }}
             {{- toYaml .Values.migrations.env | nindent 12 }}
             {{- else }}
-            - name: DATABASE_URL
-              value: {{ .Values.env | fromYaml | pluck "DATABASE_URL" | first }}
+            {{- toYaml .Values.env | nindent 12 }}
             - name: PYTHONPATH
               value: "/app"
             {{- end }}
