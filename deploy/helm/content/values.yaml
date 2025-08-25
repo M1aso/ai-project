@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: "ghcr.io/M1aso/{{ .Chart.Name }}"
+  repository: "ghcr.io/m1aso/{{ .Chart.Name }}"
   tag: "latest"
   pullPolicy: IfNotPresent
 
