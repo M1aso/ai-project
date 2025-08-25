@@ -317,7 +317,7 @@ jobs:
             echo "🔄 Deploying $svc..."
             
             # Check if release is already in progress
-            local release_status=$(check_release_status "$svc")
+            release_status=$(check_release_status "$svc")
             if echo "$release_status" | grep -q "pending\|upgrading"; then
               echo "⚠️ $svc release is already in progress, waiting for completion..."
               if wait_for_release "$svc"; then
@@ -333,9 +333,9 @@ jobs:
             if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
             
             # Try deployment with retry logic
-            local max_retries=2
-            local retry_count=0
-            local deploy_success=false
+            max_retries=2
+            retry_count=0
+            deploy_success=false
             
             while [ $retry_count -le $max_retries ] && [ "$deploy_success" = false ]; do
               if [ $retry_count -gt 0 ]; then
