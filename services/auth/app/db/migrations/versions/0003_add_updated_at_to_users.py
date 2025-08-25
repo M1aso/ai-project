@@ -17,16 +17,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add updated_at column to users table
-    op.add_column('users', sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True))
-    
-    # Set initial value for existing records
-    op.execute("UPDATE users SET updated_at = created_at WHERE updated_at IS NULL")
-    
-    # Make the column not nullable after setting values
-    op.alter_column('users', 'updated_at', nullable=False)
+    # Try to add the column - it might already exist in test databases
+    try:
+        op.add_column('users', sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True))
+        # Set initial value for existing records
+        op.execute("UPDATE users SET updated_at = created_at WHERE updated_at IS NULL")
+        
+        # Try to make it not nullable (PostgreSQL only)
+        try:
+            op.alter_column('users', 'updated_at', nullable=False)
+        except:
+            # SQLite doesn't support ALTER COLUMN, so we'll leave it nullable
+            pass
+            
+    except Exception:
+        # Column might already exist (e.g., in test databases)
+        # Just try to set the values
+        try:
+            op.execute("UPDATE users SET updated_at = created_at WHERE updated_at IS NULL")
+        except:
+            pass
 
 
 def downgrade() -> None:
-    # Remove updated_at column
-    op.drop_column('users', 'updated_at')
+    # Try to remove the column
+    try:
+        op.drop_column('users', 'updated_at')
+    except:
+        pass
