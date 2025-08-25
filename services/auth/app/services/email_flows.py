@@ -22,6 +22,8 @@ def register(db: Session, email: str, password: str) -> str:
         is_active=False,
     )
     db.add(user)
+    db.flush()  # Flush user to database to generate ID for foreign key
+    
     token = tokens.generate_token()
     ev = models.EmailVerification(
         token=token,
