@@ -101,7 +101,7 @@ docker-compose -f docker-compose.dev.yml ps
 
 # Access services:
 # - API Gateway: http://localhost:8080
-# - Auth Service: http://localhost:8000
+# - Auth Service: http://localhost:8001
 # - Profile Service: http://localhost:8002
 # - Content Service: http://localhost:8003
 # - Notifications Service: http://localhost:8004
@@ -171,7 +171,7 @@ export LOG_LEVEL="DEBUG"
 alembic upgrade head
 
 # Start the service
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 # Or use the provided script
 ./start-dev.sh
@@ -471,7 +471,7 @@ cd tests/perf && node auth-smoke.js
 
 ```bash
 # Check if ports are available
-netstat -tlnp | grep -E ':(8000|8002|8003|8004|8005|8006|5432|6379|5672|9000|9001)'
+netstat -tlnp | grep -E ':(8001|8002|8003|8004|8005|8006|5432|6379|5672|9000|9001)'
 
 # Check infrastructure services
 docker-compose -f docker-compose.dev.yml ps
@@ -479,7 +479,7 @@ docker-compose -f docker-compose.dev.yml logs postgres
 docker-compose -f docker-compose.dev.yml logs redis
 
 # Kill processes using ports
-sudo lsof -ti:8000 | xargs kill -9
+sudo lsof -ti:8001 | xargs kill -9
 ```
 
 #### 2. Database Connection Issues
@@ -664,7 +664,7 @@ psql postgresql://postgres:postgres123@localhost:5432/aiproject < backup.sql
 ./scripts/run-all-tests.sh
 
 # Check service health
-curl http://localhost:8000/healthz  # Auth
+curl http://localhost:8001/healthz  # Auth
 curl http://localhost:8002/healthz  # Profile
 curl http://localhost:8003/healthz  # Content
 curl http://localhost:8004/healthz  # Notifications
@@ -672,7 +672,7 @@ curl http://localhost:8005/healthz  # Chat
 curl http://localhost:8006/healthz  # Analytics
 
 # View API documentation
-open http://localhost:8000/docs  # Auth API
+open http://localhost:8001/docs  # Auth API
 open http://localhost:8002/docs  # Profile API
 # etc.
 ```
@@ -701,7 +701,7 @@ tail -f services/content/logs/app.log
 
 After setting up the local development environment:
 
-1. **Explore the APIs**: Visit http://localhost:8000/docs for Auth API documentation
+1. **Explore the APIs**: Visit http://localhost:8001/docs for Auth API documentation
 2. **Run the tests**: Execute `./scripts/run-all-tests.sh`
 3. **Make your first change**: Try updating a service and see hot reload in action
 4. **Check monitoring**: Visit http://localhost:3000 for Grafana dashboards

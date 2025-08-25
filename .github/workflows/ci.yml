@@ -37,9 +37,9 @@ jobs:
         run: |
           echo "🚀 Starting services for OpenAPI generation..."
           
-          # Start Auth Service (port 8000)
+          # Start Auth Service (port 8001)
           cd services/auth
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
           AUTH_PID=$!
           echo "🔐 Auth service started with PID: $AUTH_PID"
           
@@ -67,7 +67,7 @@ jobs:
           
           # Health check all services
           echo "🔍 Health checking services..."
-          for port in 8000 8002 8003 8004; do
+          for port in 8001 8002 8003 8004; do
             echo "Checking port $port..."
             timeout 10s bash -c "until curl -s http://localhost:$port/healthz > /dev/null; do sleep 1; done" || echo "Service on port $port not ready"
           done
@@ -91,8 +91,8 @@ jobs:
           
           # Lint each service's live OpenAPI spec with better error handling
           echo "🔐 Linting Auth Service OpenAPI spec..."
-          if curl -s "http://localhost:8000/api/auth/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8000/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
+          if curl -s "http://localhost:8001/api/auth/openapi.json" > /dev/null; then
+            spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
             echo "✅ Auth service OpenAPI spec validated"
           else
             echo "❌ Auth service OpenAPI endpoint not accessible"

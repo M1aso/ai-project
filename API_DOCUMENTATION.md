@@ -3164,7 +3164,7 @@ try {
 #### Development Environment
 ```bash
 # API Base URLs
-AUTH_API_URL=http://localhost:8000
+AUTH_API_URL=http://localhost:8001
 CHAT_API_URL=http://localhost:8002
 CONTENT_API_URL=http://localhost:8003
 PROFILE_API_URL=http://localhost:8004
