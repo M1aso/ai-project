@@ -52,6 +52,13 @@ env: []  # e.g. [{ name: SOME_VAR, value: "value" }]
 # - name: LOGIN_RATE_LIMIT_PER_IP
 #   value: "10"  # Failed login attempts per IP per hour
 
+# Migration Configuration
+migrations:
+  enabled: true
+  timeout: 300  # 5 minutes
+  retries: 3
+  waitForDatabase: true
+
 ingress:
   enabled: false
   className: nginx

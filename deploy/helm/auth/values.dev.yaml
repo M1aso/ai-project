@@ -109,3 +109,10 @@ env:
   # API Base URL for verification links
   - name: API_BASE_URL
     value: "http://api.45.146.164.70.nip.io"
+
+# Migration Configuration
+migrations:
+  enabled: true
+  timeout: 300
+  retries: 3
+  waitForDatabase: true

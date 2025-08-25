@@ -1,0 +1,73 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "svc.fullname" . }}-migration
+  labels:
+    app: {{ include "svc.fullname" . }}
+    component: migration
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ include "svc.fullname" . }}
+        component: migration
+    spec:
+      restartPolicy: Never
+      {{- if .Values.migrations.serviceAccountName }}
+      serviceAccountName: {{ .Values.migrations.serviceAccountName }}
+      {{- else }}
+      serviceAccountName: {{ include "svc.fullname" . }}
+      {{- end }}
+      containers:
+        - name: migration
+          image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag }}"
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              echo "Starting database migration for {{ .Chart.Name }}..."
+              cd /app
+              {{- if .Values.migrations.command }}
+              {{ .Values.migrations.command }}
+              {{- else }}
+              alembic upgrade head
+              {{- end }}
+              echo "Migration completed successfully"
+          env:
+            {{- if .Values.migrations.env }}
+            {{- toYaml .Values.migrations.env | nindent 12 }}
+            {{- else }}
+            - name: DATABASE_URL
+              value: {{ .Values.env | fromYaml | pluck "DATABASE_URL" | first }}
+            - name: PYTHONPATH
+              value: "/app"
+            {{- end }}
+          resources:
+            {{- if .Values.migrations.resources }}
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+            {{- else }}
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            {{- end }}
+          {{- if .Values.migrations.volumeMounts }}
+          volumeMounts:
+          {{- toYaml .Values.migrations.volumeMounts | nindent 12 }}
+          {{- end }}
+      {{- if .Values.migrations.volumes }}
+      volumes:
+      {{- toYaml .Values.migrations.volumes | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

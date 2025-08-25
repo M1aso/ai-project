@@ -2,6 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
+import subprocess
+import time
 
 from .db.database import reset_connection
 from .metrics import MetricsMiddleware, metrics
@@ -10,12 +13,69 @@ from .routers import secure_auth
 from .security.middleware import SecurityHeadersMiddleware
 
 
+def run_migrations():
+    """Run database migrations on startup."""
+    try:
+        print("🔄 Running database migrations...")
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minutes timeout
+        )
+        if result.returncode == 0:
+            print("✅ Database migrations completed successfully")
+        else:
+            print(f"⚠️ Migration warnings: {result.stderr}")
+    except subprocess.TimeoutExpired:
+        print("❌ Migration timeout - continuing without migration")
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
+
+
+def wait_for_database():
+    """Wait for database to be ready."""
+    max_retries = 30
+    retry_delay = 2
+    
+    for i in range(max_retries):
+        try:
+            # Try to connect to database
+            from .db.database import get_db
+            db = next(get_db())
+            db.execute("SELECT 1")
+            db.close()
+            print("✅ Database connection established")
+            return True
+        except Exception as e:
+            if i < max_retries - 1:
+                print(f"⏳ Waiting for database... ({i+1}/{max_retries})")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ Database not ready after {max_retries} attempts: {e}")
+                return False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    print("🚀 Starting Authentication Service...")
+    
+    # Wait for database if migrations are enabled
+    if os.getenv("RUN_MIGRATIONS", "true").lower() == "true":
+        if wait_for_database():
+            run_migrations()
+        else:
+            print("⚠️ Skipping migrations due to database connection issues")
+    
     reset_connection()
+    print("✅ Service startup completed")
+    
     yield
+    
     # Shutdown - add any cleanup here if needed
+    print("🛑 Shutting down Authentication Service...")
 
 
 app = FastAPI(
