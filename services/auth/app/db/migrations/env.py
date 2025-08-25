@@ -1,15 +1,23 @@
 import sys
 from pathlib import Path
 
-# Add the app root to Python path for imports
-sys.path.append(str(Path(__file__).resolve().parents[3]))
+# Add the appropriate path to Python path for imports
+# Handle both container deployment and local testing
+current_file = Path(__file__).resolve()
+if "services" in str(current_file):
+    # Running in local development or CI from project root
+    sys.path.append(str(current_file.parents[5]))
+    from services.auth.app.db import models  # noqa: F401
+else:
+    # Running in container deployment
+    sys.path.append(str(current_file.parents[3]))
+    from app.db import models  # noqa: F401
+
 from logging.config import fileConfig
 import os
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-
-from app.db import models  # noqa: F401
 
 config = context.config
 

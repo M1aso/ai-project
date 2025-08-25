@@ -6,9 +6,17 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Add the app root to Python path for imports
-sys.path.append(str(Path(__file__).resolve().parents[3]))
-from app.db import models  # noqa: E402,F401
+# Add the appropriate path to Python path for imports
+# Handle both container deployment and local testing
+current_file = Path(__file__).resolve()
+if "services" in str(current_file):
+    # Running in local development or CI from project root
+    sys.path.append(str(current_file.parents[5]))
+    from services.analytics.app.db import models  # noqa: E402,F401
+else:
+    # Running in container deployment
+    sys.path.append(str(current_file.parents[3]))
+    from app.db import models  # noqa: E402,F401
 
 config = context.config
 
