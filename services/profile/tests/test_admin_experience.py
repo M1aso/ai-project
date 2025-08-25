@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
+from services.profile.app.auth import get_current_user
 from services.profile.app.db.database import get_db
 from services.profile.app.db.models import Base
 from services.profile.app.routers.admin_experience import router as admin_router
@@ -33,7 +34,22 @@ def setup_app():
         finally:
             db.close()
 
+    def mock_get_current_user(request: Request):
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "")
+            # Parse the test token format: "user_id" or "user_id:role1,role2"
+            if ":" in token:
+                user_id, roles_part = token.split(":", 1)
+                roles = roles_part.split(",")
+            else:
+                user_id = token
+                roles = []
+            return {"user_id": user_id, "roles": roles}
+        return {"user_id": "test-user", "roles": []}
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
     return app, TestingSessionLocal
 
 
