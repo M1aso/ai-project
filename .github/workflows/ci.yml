@@ -256,10 +256,7 @@ jobs:
           echo "🚀 Starting deployment of all services..."
           echo "📊 Services to deploy: auth, profile, content, notifications, chat, analytics, content-worker, swagger-ui"
           
-          # SAFETY MECHANISM: Pin auth to stable image until database issues are resolved
-          echo "🛡️ SAFETY: Pinning auth service to stable image"
-          STABLE_AUTH_IMAGE="ghcr.io/m1aso/auth:b5eac45b352178ec63fdb603c58b74bfb270064e"
-          echo "Auth will use stable image: $STABLE_AUTH_IMAGE"
+
           
           # Clean up any stuck operations first
           echo "🧹 Cleaning up any stuck Helm operations..."
@@ -349,18 +346,10 @@ jobs:
                 sleep 30
               fi
               
-              # Use stable image for auth service to prevent deployment issues
-              if [ "$svc" = "auth" ]; then
-                IMAGE_TAG="b5eac45b352178ec63fdb603c58b74bfb270064e"
-                echo "🛡️ Using stable auth image: $IMAGE_TAG"
-              else
-                IMAGE_TAG="${{ github.sha }}"
-              fi
-              
               if helm upgrade --install "$svc" "deploy/helm/$svc" \
                 --namespace "$NS" --create-namespace \
                 --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
-                --set "image.tag=$IMAGE_TAG" \
+                --set "image.tag=${{ github.sha }}" \
                 --timeout 10m \
                 "${EXTRA_VALUES[@]}"; then
                 echo "✅ $svc deployed successfully"
