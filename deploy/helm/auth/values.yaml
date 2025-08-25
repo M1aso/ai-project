@@ -22,17 +22,19 @@ livenessProbe:
   httpGet:
     path: /healthz
     port: http
-  initialDelaySeconds: 90
+  initialDelaySeconds: 120
   periodSeconds: 10
-  failureThreshold: 5
+  failureThreshold: 10
+  timeoutSeconds: 5
 
 readinessProbe:
   httpGet:
     path: /readyz
     port: http
-  initialDelaySeconds: 90
+  initialDelaySeconds: 120
   periodSeconds: 10
-  failureThreshold: 5
+  failureThreshold: 10
+  timeoutSeconds: 5
 
 hpa:
   enabled: true
