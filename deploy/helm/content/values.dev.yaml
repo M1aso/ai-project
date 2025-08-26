@@ -7,6 +7,9 @@ service:
 imagePullSecrets:
   - name: ghcr
 
+migrations:
+  enabled: true
+
 env:
   - name: DATABASE_URL
     value: "postgresql://postgres:postgres123@postgresql.postgresql.svc.cluster.local:5432/aiproject"

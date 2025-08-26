@@ -7,6 +7,9 @@ image:
 
 imagePullSecrets: []  # e.g. [{ name: ghcr }]
 
+migrations:
+  enabled: true
+
 service:
   port: 8000
 

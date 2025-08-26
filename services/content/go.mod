@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.36
+	github.com/pressly/goose/v3 v3.16.0
 )
 
 require (
