@@ -29,7 +29,7 @@ class Metric(Base):
     value = Column(String(255), nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False)
     user_id = Column(String(36))
-    metadata = Column(JSON)
+    meta = Column(JSON)
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )

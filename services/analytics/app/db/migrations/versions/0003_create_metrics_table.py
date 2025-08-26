@@ -15,7 +15,7 @@ def upgrade() -> None:
         sa.Column("value", sa.String(255), nullable=False),
         sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
         sa.Column("user_id", sa.String(36)),
-        sa.Column("metadata", sa.JSON),
+        sa.Column("meta", sa.JSON),
         sa.Column("created_at", sa.DateTime(timezone=True), 
                   server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), 
