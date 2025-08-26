@@ -5,21 +5,42 @@ metadata:
   labels: { app: {{ include "svc.fullname" . }} }
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
   selector:
     matchLabels: { app: {{ include "svc.fullname" . }} }
   template:
     metadata:
       labels: { app: {{ include "svc.fullname" . }} }
     spec:
+      terminationGracePeriodSeconds: 10
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-{{- toYaml . | nindent 8 }}
+{{- toYaml . | nindent 12 }}
       {{- end }}
       containers:
         - name: {{ include "svc.fullname" . }}
           image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
           env:
-{{- toYaml .Values.env | nindent 12 }}
+{{- toYaml .Values.env | nindent 16 }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+{{- toYaml .Values.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+{{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+{{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
           resources:
 {{- toYaml .Values.resources | nindent 12 }}
