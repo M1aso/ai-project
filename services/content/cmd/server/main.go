@@ -689,6 +689,41 @@ func main() {
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(response)
 			})
+
+			// Media assets endpoint for content-worker (internal API)
+			protected.Patch("/media-assets/{id}", func(w http.ResponseWriter, r *http.Request) {
+				id := chi.URLParam(r, "id")
+				var req struct {
+					Status     string            `json:"status"`
+					Error      string            `json:"error,omitempty"`
+					Renditions map[string]string `json:"renditions,omitempty"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+					return
+				}
+
+				if req.Status == "" {
+					http.Error(w, `{"error":"Status is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				// Log the asset update (in real implementation, this would update database)
+				log.Printf("Asset %s status updated to: %s", id, req.Status)
+				if req.Error != "" {
+					log.Printf("Asset %s error: %s", id, req.Error)
+				}
+				if len(req.Renditions) > 0 {
+					log.Printf("Asset %s renditions: %+v", id, req.Renditions)
+				}
+
+				response := map[string]interface{}{
+					"id":     id,
+					"status": req.Status,
+				}
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(response)
+			})
 		})
 	})
 

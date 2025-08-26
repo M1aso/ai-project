@@ -18,7 +18,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// JWTAuth middleware for validating JWT tokens
+// JWTAuth middleware for validating JWT tokens and service API keys
 func JWTAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Skip authentication for health checks and docs
@@ -45,7 +45,18 @@ func JWTAuth(next http.Handler) http.Handler {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		// Parse and validate JWT token
+		// Check if it's a service API key for internal communication
+		serviceApiKey := os.Getenv("CONTENT_WORKER_API_KEY")
+		if serviceApiKey != "" && tokenString == serviceApiKey {
+			// Service authentication - add service context
+			ctx := context.WithValue(r.Context(), "user_id", "content-worker-service")
+			ctx = context.WithValue(ctx, "user_roles", []string{"service"})
+			ctx = context.WithValue(ctx, "is_service", true)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// Parse and validate JWT token for user authentication
 		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 			// Validate signing method
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -70,6 +81,7 @@ func JWTAuth(next http.Handler) http.Handler {
 			// Add user info to request context
 			ctx := context.WithValue(r.Context(), "user_id", claims.Sub)
 			ctx = context.WithValue(ctx, "user_roles", claims.Roles)
+			ctx = context.WithValue(ctx, "is_service", false)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
 			http.Error(w, `{"detail":"Invalid token claims"}`, http.StatusUnauthorized)
