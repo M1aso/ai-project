@@ -2,10 +2,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-retries 5 && \
-    npm install --retry=3
+RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
