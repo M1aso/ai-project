@@ -1,6 +1,9 @@
 image:
   tag: "DEV_SHA"  # overridden by CI via --set image.tag=${GITHUB_SHA}
 
+service:
+  port: 8000
+
 imagePullSecrets:
   - name: ghcr
 
