@@ -48,7 +48,7 @@ data:
                             - match: { prefix: "/api/notifications" }
                               route:
                                 cluster: "notifications_cluster"
-                                prefix_rewrite: "/api"
+                                prefix_rewrite: "/api/notifications"
                             - match: { prefix: "/api/chats" }
                               route:
                                 cluster: "chat_cluster"
