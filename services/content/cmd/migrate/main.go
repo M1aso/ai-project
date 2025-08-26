@@ -47,7 +47,7 @@ func main() {
 		if err := goose.Up(db, *dir); err != nil {
 			log.Fatalf("failed to run up migrations: %v", err)
 		}
-		log.Println("Migrations completed successfully")
+		log.Println("Content migrations completed successfully")
 	case "down":
 		if err := goose.Down(db, *dir); err != nil {
 			log.Fatalf("failed to run down migration: %v", err)
