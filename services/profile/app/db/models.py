@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     Column,
     Date,
@@ -84,7 +85,7 @@ class SocialBinding(Base):
 class ProfileHistory(Base):
     __tablename__ = "profile_history"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(
         String(36), ForeignKey("profiles.user_id", ondelete="CASCADE"), nullable=False
     )
