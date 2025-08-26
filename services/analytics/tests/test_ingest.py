@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,6 +16,7 @@ from services.analytics.app.routers.ingest import (
     router as ingest_router,
     MAX_BATCH_SIZE,
 )
+from services.analytics.app.auth import get_current_user
 
 
 def setup_app():
@@ -37,7 +38,16 @@ def setup_app():
         finally:
             db.close()
 
+    def mock_get_current_user(request: Request):
+        # Extract user_id from Authorization header in tests
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            user_id = auth_header.replace("Bearer ", "")
+            return {"user_id": user_id, "roles": []}
+        return {"user_id": "test-user", "roles": []}
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
     return app, TestingSessionLocal
 
 
