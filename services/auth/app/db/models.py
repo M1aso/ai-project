@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import event
 
@@ -22,7 +22,7 @@ class User(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     updated_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=True
+        DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"), onupdate=lambda: datetime.now(timezone.utc), nullable=False
     )
 
 
