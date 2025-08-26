@@ -39,26 +39,26 @@ spec:
                   
                   # Drop and recreate alembic_version table
                   python -c "
-import asyncio
-import asyncpg
-import os
-
-async def reset():
-    db_url = os.getenv('DATABASE_URL').replace('postgresql+asyncpg://', 'postgresql://')
-    conn = await asyncpg.connect(db_url)
-    try:
-        print('Dropping alembic_version table...')
-        await conn.execute('DROP TABLE IF EXISTS alembic_version CASCADE')
-        print('Creating fresh alembic_version table...')
-        await conn.execute('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))')
-        print('Migration table reset complete')
-    except Exception as e:
-        print(f'Error: {e}')
-    finally:
-        await conn.close()
-
-asyncio.run(reset())
-"
+                  import asyncio
+                  import asyncpg
+                  import os
+                  
+                  async def reset():
+                      db_url = os.getenv('DATABASE_URL').replace('postgresql+asyncpg://', 'postgresql://')
+                      conn = await asyncpg.connect(db_url)
+                      try:
+                          print('Dropping alembic_version table...')
+                          await conn.execute('DROP TABLE IF EXISTS alembic_version CASCADE')
+                          print('Creating fresh alembic_version table...')
+                          await conn.execute('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))')
+                          print('Migration table reset complete')
+                      except Exception as e:
+                          print(f'Error: {e}')
+                      finally:
+                          await conn.close()
+                  
+                  asyncio.run(reset())
+                  "
                   
                   # Stamp with latest migration
                   latest_file=$(ls versions/*.py | sort | tail -1)
