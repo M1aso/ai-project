@@ -2,6 +2,14 @@
 
 A comprehensive microservices-based e-learning platform featuring authentication, content management, real-time chat, notifications, and analytics.
 
+## 🚨 SECURITY WARNING
+
+**CRITICAL SECURITY VULNERABILITIES IDENTIFIED (2025-08-26)**
+
+⚠️ **Content Service** and **Analytics Service** are currently **UNPROTECTED** - anyone can access/modify data without authentication. See [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for details.
+
+**DO NOT USE IN PRODUCTION** until security fixes are implemented.
+
 ## 🚀 Quick Start
 
 **Get your platform running in 15 minutes:**
@@ -165,6 +173,8 @@ curl http://api.45.146.164.70.nip.io/api/auth/healthz
 
 ---
 
-**🎯 Project Status**: ✅ Ready for development  
-**🚀 Last Updated**: Auto-updated via CI/CD  
-**📚 API Docs**: http://docs.45.146.164.70.nip.io
+**🎯 Project Status**: ⚠️ CRITICAL SECURITY ISSUES IDENTIFIED  
+**🚀 Last Updated**: 2025-08-26  
+**📚 API Docs**: http://docs.45.146.164.70.nip.io  
+**🔒 Security Report**: [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md)  
+**👨‍💻 Developer Guide**: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
