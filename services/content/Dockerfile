@@ -1,9 +1,9 @@
 # Build stage
 FROM golang:1.21-alpine AS build
 WORKDIR /src
-COPY go.mod go.sum ./
+COPY go.mod ./
 COPY . .
-RUN go mod download
+RUN go mod tidy
 RUN CGO_ENABLED=0 go build -o /out/content cmd/server/main.go
 RUN CGO_ENABLED=0 go build -o /out/migrate cmd/migrate/main.go
 
