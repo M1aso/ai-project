@@ -1,0 +1,408 @@
+name: Deploy
+
+on:
+  # Manual deployment trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options: [dev, staging, prod]
+      service:
+        description: "Service to deploy (leave empty for all services)"
+        type: string
+        required: false
+      image_tag:
+        description: "Image tag to deploy (defaults to latest commit)"
+        type: string
+        required: false
+
+  # Automated deployment triggers from CI
+  repository_dispatch:
+    types: [deploy-dev, deploy-staging, deploy-prod]
+
+  # Legacy support for release tags
+  push:
+    tags:
+      - "release-*"
+
+env:
+  DEFAULT_SERVICES: "auth profile content notifications chat analytics content-worker"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ 
+      inputs.environment || 
+      (github.event.action == 'deploy-dev' && 'dev') || 
+      (github.event.action == 'deploy-staging' && 'staging') || 
+      (github.event.action == 'deploy-prod' && 'prod') || 
+      (github.ref_type == 'tag' && 'prod') ||
+      'dev' 
+    }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set deployment configuration
+        id: config
+        run: |
+          echo "🔧 Setting deployment configuration..."
+          
+          # Determine environment
+          if [ -n "${{ inputs.environment }}" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.event.action }}" = "deploy-dev" ]; then
+            ENV="dev"
+          elif [ "${{ github.event.action }}" = "deploy-staging" ]; then
+            ENV="staging"
+          elif [ "${{ github.event.action }}" = "deploy-prod" ]; then
+            ENV="prod"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            ENV="prod"
+          else
+            ENV="dev"
+          fi
+          
+          # Determine image tag
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            IMAGE_TAG="${{ inputs.image_tag }}"
+          elif [ -n "${{ github.event.client_payload.sha }}" ]; then
+            IMAGE_TAG="${{ github.event.client_payload.sha }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            IMAGE_TAG="${GITHUB_REF_NAME#release-}"
+          else
+            IMAGE_TAG="${{ github.sha }}"
+          fi
+          
+          # Determine services to deploy
+          if [ -n "${{ inputs.service }}" ]; then
+            SERVICES="${{ inputs.service }}"
+          else
+            SERVICES="${{ env.DEFAULT_SERVICES }}"
+          fi
+          
+          # Set namespace
+          NAMESPACE="$ENV"
+          
+          # Output configuration
+          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+          
+          echo "📋 Deployment Configuration:"
+          echo "  Environment: $ENV"
+          echo "  Namespace: $NAMESPACE"
+          echo "  Image Tag: $IMAGE_TAG"
+          echo "  Services: $SERVICES"
+
+      - name: Setup deployment tools
+        run: |
+          echo "🛠️ Setting up deployment tools..."
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.12.0'
+
+      - name: Configure Kubernetes access
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -n "${KUBE_CONFIG:-}" ]; then
+            echo "🔐 Configuring Kubernetes access..."
+            mkdir -p "$HOME/.kube"
+            echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
+            chmod 600 "$HOME/.kube/config"
+            echo "✅ Kubernetes configuration applied"
+            
+            # Verify connection
+            if kubectl cluster-info >/dev/null 2>&1; then
+              echo "✅ Kubernetes cluster connection verified"
+            else
+              echo "⚠️ Kubernetes cluster connection failed"
+            fi
+          else
+            echo "⚠️ KUBE_CONFIG not provided - skipping cluster configuration"
+          fi
+
+      - name: Setup container registry access
+        env:
+          NS: ${{ steps.config.outputs.namespace }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PASSWORD: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_PASSWORD:-}" ]; then
+            echo "🔐 Setting up container registry access..."
+            
+            # Create namespace if it doesn't exist
+            kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+            
+            # Create or update image pull secret
+            kubectl delete secret ghcr -n "$NS" --ignore-not-found
+            kubectl create secret docker-registry ghcr \
+              --docker-server=ghcr.io \
+              --docker-username="$GHCR_USERNAME" \
+              --docker-password="$GHCR_PASSWORD" \
+              -n "$NS"
+            
+            echo "✅ Container registry access configured for namespace: $NS"
+          else
+            echo "⚠️ GHCR credentials not provided - skipping registry setup"
+          fi
+
+      - name: Deploy infrastructure manifests
+        env:
+          NS: ${{ steps.config.outputs.namespace }}
+        run: |
+          if [ -d "deploy/k8s/" ]; then
+            echo "🏗️ Deploying infrastructure manifests..."
+            
+            # Apply manifests with validation
+            kubectl apply -f deploy/k8s/ --validate=true --namespace="$NS"
+            echo "✅ Infrastructure manifests deployed"
+            
+            # Verify critical resources
+            echo "🔍 Verifying infrastructure deployment..."
+            kubectl get ingress -n "$NS" || echo "No ingresses found"
+            kubectl get configmaps -n "$NS" || echo "No configmaps found"
+          else
+            echo "ℹ️ No infrastructure manifests found at deploy/k8s/"
+          fi
+
+      - name: Deploy API Gateway
+        env:
+          ENV: ${{ steps.config.outputs.env }}
+          NS: ${{ steps.config.outputs.namespace }}
+        run: |
+          echo "🚪 Deploying API Gateway..."
+          
+          # Check for environment-specific values
+          VALUES_FILE="deploy/helm/api-gateway/values.${ENV}.yaml"
+          EXTRA_VALUES=()
+          if [ -f "$VALUES_FILE" ]; then
+            EXTRA_VALUES=(-f "$VALUES_FILE")
+            echo "Using environment-specific values: $VALUES_FILE"
+          fi
+          
+          # Deploy with timeout and wait
+          helm upgrade --install api-gateway deploy/helm/api-gateway \
+            --namespace "$NS" \
+            --create-namespace \
+            --timeout 10m \
+            --wait \
+            "${EXTRA_VALUES[@]}"
+          
+          echo "✅ API Gateway deployed successfully"
+
+      - name: Deploy services
+        env:
+          ENV: ${{ steps.config.outputs.env }}
+          NS: ${{ steps.config.outputs.namespace }}
+          IMAGE_TAG: ${{ steps.config.outputs.image_tag }}
+          SERVICES: ${{ steps.config.outputs.services }}
+        timeout-minutes: 45
+        run: |
+          echo "🚀 Deploying services: $SERVICES"
+          
+          # Convert services string to array
+          IFS=' ' read -ra SERVICES_ARRAY <<< "$SERVICES"
+          
+          # Services that require database migrations
+          MIGRATION_SERVICES=(auth profile analytics notifications)
+          
+          # Track deployment results
+          DEPLOYED_SERVICES=()
+          FAILED_SERVICES=()
+          
+          # Deploy function
+          deploy_service() {
+            local service=$1
+            echo "🔄 Deploying service: $service"
+            
+            # Check if service needs migration
+            local needs_migration=false
+            for migration_svc in "${MIGRATION_SERVICES[@]}"; do
+              if [ "$service" = "$migration_svc" ]; then
+                needs_migration=true
+                break
+              fi
+            done
+            
+            # Run database migration if needed
+            if [ "$needs_migration" = true ]; then
+              echo "🗄️ Running database migration for $service..."
+              
+              # Clean up any existing migration job
+              kubectl delete job "${service}-migration" -n "$NS" --ignore-not-found=true
+              
+              # Create and run migration job
+              if [ -d "deploy/helm/migration-job" ]; then
+                helm template "${service}-migration" deploy/helm/migration-job \
+                  --set "serviceName=$service" \
+                  --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$service" \
+                  --set "image.tag=$IMAGE_TAG" \
+                  --set "namespace=$NS" | kubectl apply -f -
+                
+                # Wait for migration to complete
+                if kubectl wait --for=condition=complete job/"${service}-migration" -n "$NS" --timeout=300s; then
+                  echo "✅ $service migration completed successfully"
+                  kubectl logs job/"${service}-migration" -n "$NS" --tail=10 || true
+                else
+                  echo "❌ $service migration failed or timed out"
+                  kubectl logs job/"${service}-migration" -n "$NS" --tail=20 || true
+                  return 1
+                fi
+              else
+                echo "⚠️ Migration job template not found, skipping migration"
+              fi
+            fi
+            
+            # Deploy the service
+            VALUES_FILE="deploy/helm/$service/values.${ENV}.yaml"
+            EXTRA_VALUES=()
+            if [ -f "$VALUES_FILE" ]; then
+              EXTRA_VALUES=(-f "$VALUES_FILE")
+            fi
+            
+            helm upgrade --install "$service" "deploy/helm/$service" \
+              --namespace "$NS" \
+              --create-namespace \
+              --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$service" \
+              --set "image.tag=$IMAGE_TAG" \
+              --timeout 15m \
+              --wait \
+              "${EXTRA_VALUES[@]}"
+          }
+          
+          # Deploy services sequentially to avoid resource conflicts
+          for service in "${SERVICES_ARRAY[@]}"; do
+            if deploy_service "$service"; then
+              echo "✅ $service deployed successfully"
+              DEPLOYED_SERVICES+=("$service")
+            else
+              echo "❌ $service deployment failed"
+              FAILED_SERVICES+=("$service")
+            fi
+          done
+          
+          # Deploy Swagger UI if not explicitly excluded
+          if [[ ! " ${SERVICES_ARRAY[*]} " =~ " swagger-ui " ]] && [ -d "deploy/helm/swagger-ui" ]; then
+            echo "📚 Deploying Swagger UI..."
+            if helm upgrade --install swagger-ui deploy/helm/swagger-ui \
+              --namespace "$NS" \
+              --create-namespace \
+              -f "deploy/helm/swagger-ui/values.${ENV}.yaml" \
+              --timeout 5m \
+              --wait; then
+              echo "✅ Swagger UI deployed successfully"
+              DEPLOYED_SERVICES+=("swagger-ui")
+            else
+              echo "❌ Swagger UI deployment failed"
+              FAILED_SERVICES+=("swagger-ui")
+            fi
+          fi
+          
+          # Report deployment results
+          echo ""
+          echo "📊 Deployment Summary:"
+          echo "✅ Successfully deployed (${#DEPLOYED_SERVICES[@]}): ${DEPLOYED_SERVICES[*]:-none}"
+          
+          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+            echo "❌ Failed deployments (${#FAILED_SERVICES[@]}): ${FAILED_SERVICES[*]}"
+            echo "::error::Some services failed to deploy"
+            exit 1
+          else
+            echo "🎉 All services deployed successfully!"
+          fi
+
+      - name: Restart deployments for configuration updates
+        env:
+          NS: ${{ steps.config.outputs.namespace }}
+          SERVICES: ${{ steps.config.outputs.services }}
+        run: |
+          echo "🔄 Restarting deployments to apply configuration changes..."
+          
+          # Build list of deployments to restart
+          IFS=' ' read -ra SERVICES_ARRAY <<< "$SERVICES"
+          DEPLOYMENTS_TO_RESTART=("api-gateway" "${SERVICES_ARRAY[@]}")
+          
+          # Add swagger-ui if it exists
+          if kubectl get deployment swagger-ui -n "$NS" >/dev/null 2>&1; then
+            DEPLOYMENTS_TO_RESTART+=("swagger-ui")
+          fi
+          
+          # Restart deployments
+          RESTARTED=()
+          FAILED_RESTARTS=()
+          
+          for deployment in "${DEPLOYMENTS_TO_RESTART[@]}"; do
+            echo "🔄 Restarting deployment: $deployment"
+            
+            if kubectl get deployment "$deployment" -n "$NS" >/dev/null 2>&1; then
+              if kubectl rollout restart "deployment/$deployment" -n "$NS"; then
+                RESTARTED+=("$deployment")
+              else
+                FAILED_RESTARTS+=("$deployment")
+              fi
+            else
+              echo "⚠️ Deployment $deployment not found, skipping"
+            fi
+          done
+          
+          # Wait for rollouts to complete
+          echo "⏳ Waiting for rollouts to complete..."
+          for deployment in "${RESTARTED[@]}"; do
+            echo "Waiting for $deployment rollout..."
+            if kubectl rollout status "deployment/$deployment" -n "$NS" --timeout=300s; then
+              echo "✅ $deployment rollout completed"
+            else
+              echo "❌ $deployment rollout failed or timed out"
+              FAILED_RESTARTS+=("$deployment")
+            fi
+          done
+          
+          # Report restart results
+          echo ""
+          echo "📊 Restart Summary:"
+          echo "✅ Successfully restarted: ${RESTARTED[*]:-none}"
+          
+          if [ ${#FAILED_RESTARTS[@]} -gt 0 ]; then
+            echo "⚠️ Failed restarts: ${FAILED_RESTARTS[*]}"
+          else
+            echo "🎉 All deployments restarted successfully!"
+          fi
+
+      - name: Deployment status notification
+        if: always()
+        run: |
+          ENV="${{ steps.config.outputs.env }}"
+          SERVICES="${{ steps.config.outputs.services }}"
+          IMAGE_TAG="${{ steps.config.outputs.image_tag }}"
+          
+          echo ""
+          echo "📋 Deployment Report:"
+          echo "🎯 Environment: $ENV"
+          echo "📦 Services: $SERVICES"
+          echo "🏷️ Image Tag: $IMAGE_TAG"
+          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment completed successfully!"
+          else
+            echo "❌ Deployment failed!"
+            echo "🔗 Check the workflow logs for details"
+          fi
