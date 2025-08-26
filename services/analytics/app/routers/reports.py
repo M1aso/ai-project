@@ -1,6 +1,7 @@
 import csv
 import io
 from datetime import datetime, timedelta, timezone
+from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -9,12 +10,16 @@ from openpyxl import Workbook
 
 from ..db.database import get_db
 from ..db.models import Event
+from ..auth import get_current_user
 
 router = APIRouter(prefix="/api/analytics/reports", tags=["reports"])
 
 
 @router.get("/dau")
-def daily_active_users(db: Session = Depends(get_db)):
+def daily_active_users(
+    db: Session = Depends(get_db),
+    current_user: Dict[str, any] = Depends(get_current_user)
+):
     today = datetime.now(timezone.utc).date()
     start = datetime.combine(today, datetime.min.time())
     end = start + timedelta(days=1)
@@ -29,7 +34,9 @@ def daily_active_users(db: Session = Depends(get_db)):
 
 @router.get("/events")
 def export_events(
-    format: str = Query(..., pattern="^(csv|xlsx)$"), db: Session = Depends(get_db)
+    format: str = Query(..., pattern="^(csv|xlsx)$"), 
+    db: Session = Depends(get_db),
+    current_user: Dict[str, any] = Depends(get_current_user)
 ):
     events = db.query(Event).order_by(Event.id).all()
     if format == "csv":

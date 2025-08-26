@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	authmw "github.com/example/content/internal/middleware"
 )
 
 // OpenAPI specification for Content Service
@@ -330,21 +331,25 @@ func main() {
 	})
 
 	r.Route("/api/content", func(api chi.Router) {
-		// Health check endpoint (through API path)
+		// Health check endpoint (through API path) - no auth required
 		api.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"status":"ok","service":"content"}`))
 		})
+		
+		// Protected routes - require JWT authentication
+		api.Group(func(protected chi.Router) {
+			protected.Use(authmw.JWTAuth)
 
-		// Courses endpoints
-		api.Get("/courses", func(w http.ResponseWriter, r *http.Request) {
+			// Courses endpoints
+			protected.Get("/courses", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"courses":[],"status":"ok"}`))
 		})
 
-		api.Post("/courses", func(w http.ResponseWriter, r *http.Request) {
+			protected.Post("/courses", func(w http.ResponseWriter, r *http.Request) {
 			var req struct {
 				Title       string `json:"title"`
 				Description string `json:"description"`
@@ -375,7 +380,7 @@ func main() {
 			json.NewEncoder(w).Encode(response)
 		})
 
-		api.Get("/courses/{id}", func(w http.ResponseWriter, r *http.Request) {
+			protected.Get("/courses/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			if id == "" {
 				http.Error(w, "invalid course ID", http.StatusBadRequest)
@@ -397,7 +402,7 @@ func main() {
 			json.NewEncoder(w).Encode(response)
 		})
 
-		api.Put("/courses/{id}", func(w http.ResponseWriter, r *http.Request) {
+			protected.Put("/courses/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			var req struct {
 				Status string `json:"status"`
@@ -432,14 +437,14 @@ func main() {
 			json.NewEncoder(w).Encode(response)
 		})
 
-		// Materials endpoints
-		api.Get("/materials", func(w http.ResponseWriter, r *http.Request) {
+			// Materials endpoints
+			protected.Get("/materials", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"materials":[],"status":"ok"}`))
 		})
 
-		api.Get("/materials/{id}", func(w http.ResponseWriter, r *http.Request) {
+			protected.Get("/materials/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			if id == "" {
 				http.Error(w, "invalid material ID", http.StatusBadRequest)
@@ -461,7 +466,7 @@ func main() {
 			json.NewEncoder(w).Encode(response)
 		})
 
-		api.Put("/materials/{id}", func(w http.ResponseWriter, r *http.Request) {
+			protected.Put("/materials/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			var req struct {
 				Status string `json:"status"`
@@ -495,8 +500,8 @@ func main() {
 			json.NewEncoder(w).Encode(response)
 		})
 
-		// Upload presign endpoint
-		api.Post("/materials/{id}/upload/presign", func(w http.ResponseWriter, r *http.Request) {
+			// Upload presign endpoint
+			protected.Post("/materials/{id}/upload/presign", func(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			var req struct {
 				Size int64  `json:"size"`
@@ -522,6 +527,7 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(response)
 		})
+		}) // End protected group
 	})
 
 	port := os.Getenv("PORT")
