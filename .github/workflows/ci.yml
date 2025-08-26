@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches: [ main, dev ]
@@ -7,514 +8,320 @@ on:
   pull_request:
     branches: [ main, dev ]
 
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
 jobs:
+  # Contract validation with live services
   contracts_lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
-      # Install Spectral CLI for OpenAPI validation
-      - name: Install Spectral CLI
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install OpenAPI validation tools
         run: |
+          echo "🔧 Installing OpenAPI validation tools..."
           npm config set registry https://registry.npmjs.org/
           npm cache clean --force
-          # Try alternative package names and fallback options
-          npm install -g spectral-cli --verbose || \
-          npm install -g @apidevtools/swagger-cli --verbose || \
-          echo "⚠️ Spectral CLI installation failed, using basic validation"
-      
-      # Start services in CI environment to generate live OpenAPI specs
+          
+          # Try multiple package options with better error handling
+          if npm install -g spectral-cli --verbose; then
+            echo "✅ Spectral CLI installed successfully"
+          elif npm install -g @apidevtools/swagger-cli --verbose; then
+            echo "✅ Swagger CLI installed as fallback"
+          else
+            echo "⚠️ OpenAPI validation tools installation failed, using basic validation"
+          fi
+
       - name: Setup Python environment
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
             services/*/requirements.txt
-      
+
       - name: Install Python dependencies
         run: |
+          echo "📦 Installing Python dependencies..."
+          pip install --upgrade pip
           pip install fastapi uvicorn sqlalchemy psycopg2-binary redis jinja2
-          pip install -r requirements.txt
+          
+          # Install main requirements
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          
           # Install service-specific requirements
-          pip install -r services/notifications/requirements.txt
-      
-      - name: Start Services for OpenAPI Generation
+          if [ -f services/notifications/requirements.txt ]; then
+            pip install -r services/notifications/requirements.txt
+          fi
+
+      - name: Start services for OpenAPI generation
+        id: services
         run: |
-          echo "🚀 Starting services for OpenAPI generation..."
+          echo "🚀 Starting services for live OpenAPI generation..."
           
-          # Start all services in parallel
-          (cd services/auth && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8001) &
-          AUTH_PID=$!
-          echo "🔐 Auth service started with PID: $AUTH_PID"
+          # Service configuration
+          declare -A SERVICES=(
+            ["auth"]="8001"
+            ["profile"]="8002" 
+            ["analytics"]="8003"
+            ["notifications"]="8004"
+          )
           
-          (cd services/profile && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8002) &
-          PROFILE_PID=$!
-          echo "👤 Profile service started with PID: $PROFILE_PID"
+          SERVICE_PIDS=()
           
-          (cd services/analytics && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8003) &
-          ANALYTICS_PID=$!
-          echo "📊 Analytics service started with PID: $ANALYTICS_PID"
-          
-          (cd services/notifications && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8004) &
-          NOTIFICATIONS_PID=$!
-          echo "📢 Notifications service started with PID: $NOTIFICATIONS_PID"
+          # Start services in parallel
+          for service in "${!SERVICES[@]}"; do
+            port=${SERVICES[$service]}
+            echo "🔄 Starting $service service on port $port..."
+            
+            if [ -d "services/$service" ]; then
+              (cd "services/$service" && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port "$port") &
+              pid=$!
+              SERVICE_PIDS+=($pid)
+              echo "✅ $service service started with PID: $pid"
+            else
+              echo "⚠️ Service directory services/$service not found, skipping"
+            fi
+          done
           
           # Store PIDs for cleanup
-          echo "$AUTH_PID $PROFILE_PID $ANALYTICS_PID $NOTIFICATIONS_PID" > /tmp/service_pids
+          echo "${SERVICE_PIDS[*]}" > /tmp/service_pids
+          echo "pids=${SERVICE_PIDS[*]}" >> $GITHUB_OUTPUT
           
-          # Smart health check with shorter timeout
+          # Health check with timeout
           echo "🔍 Waiting for services to be ready..."
-          for port in 8001 8002 8003 8004; do
-            echo "Checking port $port..."
-            timeout 30s bash -c "until curl -s http://localhost:$port/healthz > /dev/null 2>&1; do sleep 0.5; done" && echo "✅ Service on port $port ready" || echo "⚠️ Service on port $port not ready"
+          for service in "${!SERVICES[@]}"; do
+            port=${SERVICES[$service]}
+            echo "Checking $service on port $port..."
+            
+            if timeout 30s bash -c "until curl -sf http://localhost:$port/healthz > /dev/null 2>&1; do sleep 1; done"; then
+              echo "✅ $service service ready on port $port"
+            else
+              echo "⚠️ $service service not ready on port $port (timeout)"
+            fi
           done
           
           echo "✅ Service startup completed"
-      
-      # Lint live OpenAPI specs from running services
-      - name: Lint Live OpenAPI Specs
+
+      - name: Validate OpenAPI specifications
         run: |
-          echo "🔍 Linting live OpenAPI specs from running services..."
+          echo "🔍 Validating live OpenAPI specifications..."
           
-          # Read PIDs from file
-          SERVICE_PIDS=$(cat /tmp/service_pids)
+          # Service configuration
+          declare -A SERVICES=(
+            ["auth"]="8001"
+            ["profile"]="8002"
+            ["analytics"]="8003" 
+            ["notifications"]="8004"
+          )
           
-          # Parallel linting function
-          lint_service() {
+          # Validation function
+          validate_service_spec() {
             local service=$1
             local port=$2
             local endpoint="http://localhost:$port/api/$service/openapi.json"
             
-            echo "🔍 Linting $service service..."
-            if curl -s "$endpoint" > /dev/null 2>&1; then
-              # Check if spectral is available
-              if command -v spectral >/dev/null 2>&1; then
-                if spectral lint "$endpoint" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error; then
-                  echo "✅ $service service OpenAPI spec validated with Spectral"
-                  return 0
-                else
-                  echo "❌ $service service OpenAPI spec validation failed"
-                  return 1
-                fi
-              elif command -v swagger-cli >/dev/null 2>&1; then
-                if swagger-cli validate "$endpoint"; then
-                  echo "✅ $service service OpenAPI spec validated with Swagger CLI"
-                  return 0
-                else
-                  echo "❌ $service service OpenAPI spec validation failed"
-                  return 1
-                fi
-              else
-                # Basic validation - just check if it's valid JSON
-                if curl -s "$endpoint" | jq . > /dev/null 2>&1; then
-                  echo "⚠️ $service service OpenAPI spec basic validation passed (JSON valid)"
-                  return 0
-                else
-                  echo "❌ $service service OpenAPI spec is not valid JSON"
-                  return 1
-                fi
-              fi
-            else
-              echo "❌ $service service OpenAPI endpoint not accessible"
+            echo "🔍 Validating $service OpenAPI spec..."
+            
+            # Check if endpoint is accessible
+            if ! curl -sf "$endpoint" > /dev/null 2>&1; then
+              echo "❌ $service OpenAPI endpoint not accessible: $endpoint"
               return 1
+            fi
+            
+            # Try different validation tools
+            if command -v spectral >/dev/null 2>&1; then
+              if [ -f "libs/contracts/.spectral.yaml" ]; then
+                spectral lint "$endpoint" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error
+              else
+                spectral lint "$endpoint" -f stylish -D --fail-severity=error
+              fi
+            elif command -v swagger-cli >/dev/null 2>&1; then
+              swagger-cli validate "$endpoint"
+            else
+              # Basic JSON validation
+              if curl -sf "$endpoint" | jq . > /dev/null 2>&1; then
+                echo "✅ $service OpenAPI spec is valid JSON"
+                return 0
+              else
+                echo "❌ $service OpenAPI spec is not valid JSON"
+                return 1
+              fi
             fi
           }
           
-          # Run linting in parallel
-          lint_service "auth" 8001 &
-          LINT_PID1=$!
-          lint_service "profile" 8002 &
-          LINT_PID2=$!
-          lint_service "analytics" 8003 &
-          LINT_PID3=$!
-          lint_service "notifications" 8004 &
-          LINT_PID4=$!
+          # Run validations in parallel
+          validation_pids=()
+          for service in "${!SERVICES[@]}"; do
+            validate_service_spec "$service" "${SERVICES[$service]}" &
+            validation_pids+=($!)
+          done
           
-          # Wait for all linting processes and collect results
-          wait $LINT_PID1; RESULT1=$?
-          wait $LINT_PID2; RESULT2=$?
-          wait $LINT_PID3; RESULT3=$?
-          wait $LINT_PID4; RESULT4=$?
+          # Wait for all validations and collect results
+          failed_services=()
+          for i in "${!validation_pids[@]}"; do
+            if ! wait "${validation_pids[$i]}"; then
+              failed_services+=("${!SERVICES[@]:$i:1}")
+            fi
+          done
           
-          # Check if any failed
-          if [ $RESULT1 -ne 0 ] || [ $RESULT2 -ne 0 ] || [ $RESULT3 -ne 0 ] || [ $RESULT4 -ne 0 ]; then
-            echo "❌ Some OpenAPI specs failed validation"
-            # Cleanup services
-            kill $SERVICE_PIDS 2>/dev/null || true
+          # Report results
+          if [ ${#failed_services[@]} -eq 0 ]; then
+            echo "🎉 All OpenAPI specifications validated successfully!"
+          else
+            echo "❌ OpenAPI validation failed for: ${failed_services[*]}"
             exit 1
           fi
-          
-          echo "🎉 All live OpenAPI specs passed validation!"
-          
-          # Cleanup: Stop all services
-          echo "🧹 Cleaning up services..."
-          kill $SERVICE_PIDS 2>/dev/null || true
-          echo "✅ Services cleaned up"
 
+      - name: Cleanup services
+        if: always()
+        run: |
+          echo "🧹 Cleaning up services..."
+          if [ -f /tmp/service_pids ]; then
+            SERVICE_PIDS=$(cat /tmp/service_pids)
+            if [ -n "$SERVICE_PIDS" ]; then
+              kill $SERVICE_PIDS 2>/dev/null || true
+              echo "✅ Services stopped"
+            fi
+          fi
+
+  # Unit tests
   unit_tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python environment  
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
           cache-dependency-path: 'requirements.txt'
-      - run: pip install -r requirements.txt
-      - run: pytest -q
 
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          echo "🧪 Running unit tests..."
+          pytest -v --tb=short
+
+  # Build and push Docker images
   build_and_push:
     needs: [contracts_lint, unit_tests]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         service: [auth, profile, content, notifications, analytics, content-worker, chat]
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Derive lowercase owner for GHCR
-        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - name: Setup environment variables
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          echo "SERVICE=${{ matrix.service }}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: ./services/${{ matrix.service }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/${{ matrix.service }}:${{ github.sha }}
             ghcr.io/${{ env.OWNER_LC }}/${{ matrix.service }}:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
-  # Auto-deploy to dev environment when pushing to dev branch
-  auto_deploy_dev:
+  # Trigger deployment workflows
+  trigger_deployments:
     needs: build_and_push
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # 1 hour timeout for entire deployment job
-    environment: dev
-    permissions:
-      contents: read
-      packages: read
-      id-token: write
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Derive lowercase owner for GHCR
-        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      - name: Configure kubeconfig from secret
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      - name: Trigger environment-specific deployments
         run: |
-          if [ -n "${KUBE_CONFIG:-}" ]; then
-            mkdir -p "$HOME/.kube"
-            echo "$KUBE_CONFIG" | base64 -d > "$HOME/.kube/config"
-            echo "✓ Wrote kubeconfig from secret"
-          else
-            echo "↷ KUBE_CONFIG is empty; skipping. Add it as an Environment secret."
-          fi
+          echo "🚀 Triggering deployment workflows..."
+          
+          # Determine target environment
+          case "${{ github.ref }}" in
+            "refs/heads/dev")
+              ENVIRONMENT="dev"
+              EVENT_TYPE="deploy-dev"
+              ;;
+            "refs/heads/main")
+              ENVIRONMENT="staging"  
+              EVENT_TYPE="deploy-staging"
+              ;;
+            refs/tags/release-*)
+              ENVIRONMENT="prod"
+              EVENT_TYPE="deploy-prod"
+              ;;
+            *)
+              echo "No deployment configured for ref: ${{ github.ref }}"
+              exit 0
+              ;;
+          esac
+          
+          echo "Target environment: $ENVIRONMENT"
+          echo "Event type: $EVENT_TYPE"
 
-      - name: Create GHCR imagePullSecret
-        env:
-          NS: dev
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_PASSWORD: ${{ secrets.GHCR_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_PASSWORD:-}" ]; then
-            kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
-            kubectl -n "$NS" delete secret ghcr --ignore-not-found
-            kubectl -n "$NS" create secret docker-registry ghcr \
-              --docker-server=ghcr.io \
-              --docker-username="$GHCR_USERNAME" \
-              --docker-password="$GHCR_PASSWORD"
-            echo "✓ Created imagePullSecret 'ghcr' in namespace $NS"
-          else
-            echo "↷ GHCR_USERNAME/GHCR_TOKEN not provided; skipping imagePullSecret creation."
-          fi
-
-      - name: Deploy api-gateway
-        env:
-          ENV: dev
-          NS: dev
-        run: |
-          set -euo pipefail
-          VALUES_FILE="deploy/helm/api-gateway/values.${ENV}.yaml"
-          if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
-          helm upgrade --install api-gateway deploy/helm/api-gateway \
-            --namespace "$NS" --create-namespace \
-            "${EXTRA_VALUES[@]}"
-
-      - name: Deploy services
-        env:
-          ENV: dev
-          NS: dev
-        timeout-minutes: 30  # Explicit timeout for deployment step
-        run: |
-          set -euo pipefail
-          
-          echo "🚀 Starting deployment of all services..."
-          echo "📊 Services to deploy: auth, profile, content, notifications, chat, analytics, content-worker, swagger-ui"
-          
-
-          
-          # Clean up any stuck operations first
-          echo "🧹 Cleaning up any stuck Helm operations..."
-          for svc in auth profile content notifications chat analytics content-worker swagger-ui; do
-            # Check if there are any pending operations
-            if helm status "$svc" -n "$NS" 2>/dev/null | grep -q "pending\|upgrading"; then
-              echo "⚠️ Found pending operation for $svc, attempting to rollback..."
-              if helm rollback "$svc" -n "$NS" --timeout 5m; then
-                echo "✅ Successfully rolled back $svc"
-              else
-                echo "⚠️ Rollback failed for $svc, will continue with deployment"
-              fi
-            fi
-          done
-          
-          # Reduced wait time for cleanup
-          echo "⏳ Waiting for cleanup to complete..."
-          sleep 10
-          
-          # Function to check if a release is in progress
-          check_release_status() {
-            local svc=$1
-            local status=$(helm status "$svc" -n "$NS" 2>/dev/null | grep -E "STATUS:|REVISION:" || echo "not_found")
-            echo "$status"
-          }
-          
-          # Function to wait for release to be ready
-          wait_for_release() {
-            local svc=$1
-            local max_wait=300  # 5 minutes
-            local wait_time=0
-            local interval=10
-            
-            echo "⏳ Waiting for $svc release to be ready..."
-            while [ $wait_time -lt $max_wait ]; do
-              local status=$(helm status "$svc" -n "$NS" 2>/dev/null | grep "STATUS:" | awk '{print $2}' || echo "unknown")
-              if [ "$status" = "deployed" ]; then
-                echo "✅ $svc release is ready"
-                return 0
-              elif [ "$status" = "failed" ]; then
-                echo "❌ $svc release failed"
-                return 1
-              else
-                echo "⏳ $svc release status: $status (waiting...)"
-                sleep $interval
-                wait_time=$((wait_time + interval))
-              fi
-            done
-            echo "⏰ Timeout waiting for $svc release"
-            return 1
-          }
-          
-          # Track deployment progress
-          DEPLOYED_SERVICES=()
-          FAILED_SERVICES=()
-          
-          # Deploy core services first (those with migrations)
-          echo "🔧 Deploying core services with migrations..."
-          for svc in auth profile analytics notifications; do
-            echo "🔄 Deploying $svc..."
-            
-            # Run migration job first for services that need it
-            if [ "$svc" = "auth" ] || [ "$svc" = "profile" ] || [ "$svc" = "analytics" ]; then
-              echo "🗄️ Running migration job for $svc..."
-              
-              # Delete existing migration job if it exists
-              kubectl delete job "${svc}-migration" -n "$NS" --ignore-not-found=true
-              
-              # Create migration job using chart
-              helm template "${svc}-migration" deploy/helm/migration-job \
-                --set "serviceName=$svc" \
-                --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
-                --set "image.tag=${{ github.sha }}" \
-                --set "namespace=$NS" | kubectl apply -f -
-              
-              # Wait for migration to complete with shorter timeout
-              echo "⏳ Waiting for $svc migration to complete..."
-              if kubectl wait --for=condition=complete job/"${svc}-migration" -n "$NS" --timeout=180s; then
-                echo "✅ $svc migration completed successfully"
-                kubectl logs job/"${svc}-migration" -n "$NS" --tail=10 || true
-              else
-                echo "❌ $svc migration failed"
-                kubectl logs job/"${svc}-migration" -n "$NS" --tail=20 || true
-                kubectl describe job/"${svc}-migration" -n "$NS" || true
-                FAILED_SERVICES+=("$svc")
-                continue
-              fi
-            fi
-            
-            # Check if release is already in progress
-            release_status=$(check_release_status "$svc")
-            if echo "$release_status" | grep -q "pending\|upgrading"; then
-              echo "⚠️ $svc release is already in progress, waiting for completion..."
-              if wait_for_release "$svc"; then
-                echo "✅ $svc was already being deployed and is now ready"
-                DEPLOYED_SERVICES+=("$svc")
-                continue
-              else
-                echo "❌ $svc release failed or timed out, will retry deployment"
-              fi
-            fi
-            
-            VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
-            if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
-            
-            # Try deployment with retry logic
-            max_retries=2
-            retry_count=0
-            deploy_success=false
-            
-            while [ $retry_count -le $max_retries ] && [ "$deploy_success" = false ]; do
-              if [ $retry_count -gt 0 ]; then
-                echo "🔄 Retry $retry_count/$max_retries for $svc..."
-                # Reduced retry wait time
-                sleep 10
-              fi
-              
-              if helm upgrade --install "$svc" "deploy/helm/$svc" \
-                --namespace "$NS" --create-namespace \
-                --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
-                --set "image.tag=${{ github.sha }}" \
-                --timeout 10m \
-                "${EXTRA_VALUES[@]}"; then
-                echo "✅ $svc deployed successfully"
-                DEPLOYED_SERVICES+=("$svc")
-                deploy_success=true
-              else
-                echo "❌ $svc deployment attempt $((retry_count + 1)) failed"
-                retry_count=$((retry_count + 1))
-              fi
-            done
-            
-            if [ "$deploy_success" = false ]; then
-              echo "❌ $svc deployment failed after $max_retries retries"
-              FAILED_SERVICES+=("$svc")
-            fi
-          done
-          
-          # Deploy remaining services
-          echo "🔧 Deploying remaining services..."
-          for svc in content chat content-worker; do
-            echo "🔄 Deploying $svc..."
-            VALUES_FILE="deploy/helm/$svc/values.${ENV}.yaml"
-            if [ -f "$VALUES_FILE" ]; then EXTRA_VALUES=(-f "$VALUES_FILE"); else EXTRA_VALUES=(); fi
-            
-            if helm upgrade --install "$svc" "deploy/helm/$svc" \
-              --namespace "$NS" --create-namespace \
-              --set "image.repository=ghcr.io/${{ env.OWNER_LC }}/$svc" \
-              --set "image.tag=${{ github.sha }}" \
-              --timeout 5m \
-              "${EXTRA_VALUES[@]}"; then
-              echo "✅ $svc deployed successfully"
-              DEPLOYED_SERVICES+=("$svc")
-            else
-              echo "❌ $svc deployment failed"
-              FAILED_SERVICES+=("$svc")
-            fi
-          done
-          
-          # Deploy Swagger UI separately (uses public image)
-          echo "🔄 Deploying swagger-ui..."
-          if helm upgrade --install swagger-ui deploy/helm/swagger-ui \
-            --namespace "$NS" --create-namespace \
-            -f deploy/helm/swagger-ui/values.dev.yaml \
-            --timeout 3m; then
-            echo "✅ swagger-ui deployed successfully"
-            DEPLOYED_SERVICES+=("swagger-ui")
-          else
-            echo "❌ swagger-ui deployment failed"
-            FAILED_SERVICES+=("swagger-ui")
-          fi
-          
-          # Report deployment results
-          echo "📊 Deployment Summary:"
-          echo "✅ Successfully deployed: ${DEPLOYED_SERVICES[*]:-none}"
-          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
-            echo "❌ Failed services: ${FAILED_SERVICES[*]}"
-            echo "::error::Some services failed to deploy"
-            exit 1
-          else
-            echo "🎉 All services deployed successfully!"
-          fi
-
-      - name: Restart deployments to pick up ConfigMap changes
-        env:
-          NS: dev
-        run: |
-          set -euo pipefail
-          echo "🔄 Restarting deployments to ensure ConfigMap changes are applied..."
-          
-          # Restart all services that might have ConfigMap dependencies
-          SERVICES_TO_RESTART=(api-gateway auth profile content notifications chat analytics content-worker swagger-ui)
-          
-          # Track successful and failed restarts
-          RESTARTED_SERVICES=()
-          FAILED_SERVICES=()
-          
-          # Restart each deployment
-          for svc in "${SERVICES_TO_RESTART[@]}"; do
-            echo "🔄 Restarting deployment: $svc"
-            if kubectl get deployment "$svc" -n "$NS" >/dev/null 2>&1; then
-              if kubectl rollout restart "deployment/$svc" -n "$NS"; then
-                echo "✓ Successfully triggered restart for $svc"
-                RESTARTED_SERVICES+=("$svc")
-              else
-                echo "❌ Failed to restart $svc"
-                FAILED_SERVICES+=("$svc")
-              fi
-            else
-              echo "⚠️  Deployment $svc not found, skipping restart"
-            fi
-          done
-          
-          # Wait for all restarted deployments to complete
-          echo "⏳ Waiting for all restarted deployments to be ready..."
-          for svc in "${RESTARTED_SERVICES[@]}"; do
-            echo "Waiting for $svc rollout to complete..."
-            if kubectl rollout status "deployment/$svc" -n "$NS" --timeout=300s; then
-              echo "✅ $svc rollout completed successfully"
-            else
-              echo "❌ $svc rollout failed or timed out"
-              FAILED_SERVICES+=("$svc")
-            fi
-          done
-          
-          # Report results
-          echo "📊 Restart Summary:"
-          echo "✅ Successfully restarted: ${RESTARTED_SERVICES[*]:-none}"
-          if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
-            echo "❌ Failed services: ${FAILED_SERVICES[*]}"
-            echo "::warning::Some services failed to restart properly"
-          else
-            echo "🎉 All deployments restarted successfully!"
-          fi
-
+      - name: Dispatch deployment event
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-')
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: ${{ 
+            github.ref == 'refs/heads/dev' && 'deploy-dev' ||
+            github.ref == 'refs/heads/main' && 'deploy-staging' ||
+            startsWith(github.ref, 'refs/tags/release-') && 'deploy-prod'
+          }}
+          client-payload: |
+            {
+              "sha": "${{ github.sha }}",
+              "ref": "${{ github.ref }}",
+              "environment": "${{ 
+                github.ref == 'refs/heads/dev' && 'dev' ||
+                github.ref == 'refs/heads/main' && 'staging' ||
+                startsWith(github.ref, 'refs/tags/release-') && 'prod'
+              }}",
+              "tag": "${{ github.ref_name }}"
+            }
