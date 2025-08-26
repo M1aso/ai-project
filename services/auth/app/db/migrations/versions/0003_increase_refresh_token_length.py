@@ -1,17 +1,16 @@
-"""increase refresh token length
+"""Increase refresh token length
 
-Revision ID: 0002_increase_refresh_token_length
-Revises: 0001_initial
-Create Date: 2025-08-25 09:50:00.000000
+Revision ID: 0003_increase_refresh_token_length
+Revises: 0002_add_timestamps
+Create Date: 2025-08-26 10:35:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
-revision = '0002_increase_refresh_token_length'
-down_revision = '0001_initial'
+revision = '0003_increase_refresh_token_length'
+down_revision = '0002_add_timestamps'
 branch_labels = None
 depends_on = None
 

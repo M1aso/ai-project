@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from datetime import datetime, timezone
 
 # revision identifiers, used by Alembic.
-revision = '0003_add_updated_at_to_users'
-down_revision = '0002_add_timestamps'
+revision = '0004_add_updated_at_to_users'
+down_revision = '0003_increase_refresh_token_length'
 branch_labels = None
 depends_on = None
 
