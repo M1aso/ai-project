@@ -332,9 +332,9 @@ jobs:
                 --set "image.tag=${{ github.sha }}" \
                 --set "namespace=$NS" | kubectl apply -f -
               
-              # Wait for migration to complete
+              # Wait for migration to complete with shorter timeout
               echo "⏳ Waiting for $svc migration to complete..."
-              if kubectl wait --for=condition=complete job/"${svc}-migration" -n "$NS" --timeout=300s; then
+              if kubectl wait --for=condition=complete job/"${svc}-migration" -n "$NS" --timeout=180s; then
                 echo "✅ $svc migration completed successfully"
                 kubectl logs job/"${svc}-migration" -n "$NS" --tail=10 || true
               else

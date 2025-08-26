@@ -29,6 +29,27 @@ spec:
                 echo "Available migration files:"
                 ls -la versions/
                 
+                # Clean up any existing connections and try to get current revision
+                echo "🔄 Cleaning up database connections..."
+                python -c "
+                import asyncio
+                import asyncpg
+                import os
+                
+                async def cleanup_connections():
+                    db_url = os.getenv('DATABASE_URL').replace('postgresql+asyncpg://', 'postgresql://')
+                    try:
+                        conn = await asyncpg.connect(db_url)
+                        # Terminate any problematic connections
+                        await conn.execute('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = \\'idle in transaction\\' AND pid != pg_backend_pid()')
+                        await conn.close()
+                        print('Database connections cleaned')
+                    except Exception as e:
+                        print(f'Connection cleanup warning: {e}')
+                
+                asyncio.run(cleanup_connections())
+                " || true
+                
                 # Try to get current revision, handle errors gracefully
                 current_revision=$(alembic current 2>/dev/null || echo "failed")
                 echo "Current database revision check: $current_revision"
@@ -37,7 +58,7 @@ spec:
                 if [ "$current_revision" = "failed" ] || echo "$current_revision" | grep -q "Can't locate revision"; then
                   echo "Database has corrupted migration state, performing complete reset..."
                   
-                  # Drop and recreate alembic_version table with proper transaction handling
+                  # Reset database migration state completely
                   python -c "
                   import asyncio
                   import asyncpg
@@ -47,15 +68,21 @@ spec:
                       db_url = os.getenv('DATABASE_URL').replace('postgresql+asyncpg://', 'postgresql://')
                       conn = await asyncpg.connect(db_url)
                       try:
-                          # Use a transaction to ensure atomicity
-                          async with conn.transaction():
-                              print('Dropping alembic_version table...')
-                              await conn.execute('DROP TABLE IF EXISTS alembic_version CASCADE')
-                              print('Creating fresh alembic_version table...')
-                              await conn.execute('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))')
-                              print('Migration table reset complete')
+                          print('Terminating any active transactions...')
+                          # Force rollback any active transactions
+                          await conn.execute('ROLLBACK')
+                          print('Dropping alembic_version table...')
+                          await conn.execute('DROP TABLE IF EXISTS alembic_version CASCADE')
+                          print('Creating fresh alembic_version table...')
+                          await conn.execute('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))')
+                          print('Migration table reset complete')
                       except Exception as e:
                           print(f'Error during migration table reset: {e}')
+                          # Try to rollback and continue
+                          try:
+                              await conn.execute('ROLLBACK')
+                          except:
+                              pass
                           raise
                       finally:
                           await conn.close()
@@ -72,7 +99,29 @@ spec:
                   echo "Database revision appears valid, proceeding with upgrade"
                 fi
                 
+                # Ensure clean transaction state before migration
+                echo "🔄 Ensuring clean transaction state..."
+                python -c "
+                import asyncio
+                import asyncpg
+                import os
+                
+                async def cleanup():
+                    db_url = os.getenv('DATABASE_URL').replace('postgresql+asyncpg://', 'postgresql://')
+                    conn = await asyncpg.connect(db_url)
+                    try:
+                        await conn.execute('ROLLBACK')
+                        print('Transaction state cleaned')
+                    except:
+                        pass
+                    finally:
+                        await conn.close()
+                
+                asyncio.run(cleanup())
+                " || true
+                
                 # Run migration upgrade with proper error handling
+                echo "🔄 Running alembic upgrade..."
                 if ! alembic upgrade head; then
                   echo "❌ Migration upgrade failed"
                   exit 1
@@ -102,4 +151,4 @@ spec:
             limits:
               cpu: 200m
               memory: 256Mi
-  backoffLimit: 3
+  backoffLimit: 1
