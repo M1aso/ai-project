@@ -174,8 +174,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [auth, profile, content, notifications, analytics, content-worker]
-        # Temporarily disabled chat due to npm 403 errors: chat
+        service: [auth, profile, content, notifications, analytics, content-worker, chat]
     permissions:
       contents: read
       packages: write
