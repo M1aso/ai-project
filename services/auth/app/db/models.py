@@ -22,7 +22,7 @@ class User(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     updated_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc), nullable=False
     )
 
 
@@ -61,7 +61,7 @@ class PasswordReset(Base):
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
-    token = Column(String(64), primary_key=True)
+    token = Column(String(512), primary_key=True)
     user_id = Column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
