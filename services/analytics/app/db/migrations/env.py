@@ -40,6 +40,13 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         version_table="alembic_version_analytics",
+        include_schemas=True,
+        compare_type=True,
+        compare_server_default=True,
+        include_object=lambda obj, name, type_, *args: (
+            # Only include tables that belong to analytics service
+            type_ != "table" or name in ["events", "metrics"]
+        ),
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -52,7 +59,18 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, version_table="alembic_version_analytics")
+        context.configure(
+            connection=connection, 
+            target_metadata=target_metadata, 
+            version_table="alembic_version_analytics",
+            include_schemas=True,
+            compare_type=True,
+            compare_server_default=True,
+            include_object=lambda obj, name, type_, *args: (
+                # Only include tables that belong to analytics service
+                type_ != "table" or name in ["events", "metrics"]
+            ),
+        )
         with context.begin_transaction():
             context.run_migrations()
 
