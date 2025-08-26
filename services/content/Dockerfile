@@ -2,8 +2,8 @@
 FROM golang:1.21-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
 COPY . .
+RUN go mod download
 RUN CGO_ENABLED=0 go build -o /out/content cmd/server/main.go
 RUN CGO_ENABLED=0 go build -o /out/migrate cmd/migrate/main.go
 
