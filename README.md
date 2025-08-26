@@ -179,3 +179,4 @@ curl http://api.45.146.164.70.nip.io/api/auth/healthz
 **🔒 Security Report**: [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md)  
 **👨‍💻 Developer Guide**: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
 # Test improved workflows
+# Test commit to trigger workflow
