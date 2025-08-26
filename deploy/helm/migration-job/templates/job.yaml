@@ -38,6 +38,23 @@ spec:
                 current_revision=$(alembic current 2>/dev/null || echo "failed")
                 echo "Current database revision check: $current_revision"
                 
+                # Check if there's a mismatch between database state and expected migration chain
+                # This happens when the database is at an earlier revision than what Alembic expects
+                if [ "$current_revision" != "failed" ]; then
+                  # Check if the current revision exists in the migration files
+                  if ! ls versions/*.py | grep -q "$current_revision"; then
+                    echo "Current revision $current_revision not found in migration files, forcing reset..."
+                    current_revision="failed"
+                  else
+                    # Check if we can proceed with upgrade from current revision
+                    echo "Checking if upgrade path exists from current revision..."
+                    if ! alembic check 2>/dev/null; then
+                      echo "Upgrade path check failed, forcing reset..."
+                      current_revision="failed"
+                    fi
+                  fi
+                fi
+                
                 # Special handling for problematic auth migration transition
                 if [ "{{ .Values.serviceName }}" = "auth" ] && echo "$current_revision" | grep -q "0003_refresh_token_length"; then
                   echo "Detected problematic auth migration state, forcing reset..."
