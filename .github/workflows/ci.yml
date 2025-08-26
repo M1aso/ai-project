@@ -25,6 +25,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            services/*/requirements.txt
       
       - name: Install Python dependencies
         run: |
@@ -37,92 +41,85 @@ jobs:
         run: |
           echo "🚀 Starting services for OpenAPI generation..."
           
-          # Start Auth Service (port 8001)
-          cd services/auth
-          CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+          # Start all services in parallel
+          (cd services/auth && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8001) &
           AUTH_PID=$!
           echo "🔐 Auth service started with PID: $AUTH_PID"
           
-          # Start Profile Service (port 8002)
-          cd ../profile
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 &
+          (cd services/profile && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8002) &
           PROFILE_PID=$!
           echo "👤 Profile service started with PID: $PROFILE_PID"
           
-          # Start Analytics Service (port 8003)
-          cd ../analytics
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
+          (cd services/analytics && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8003) &
           ANALYTICS_PID=$!
           echo "📊 Analytics service started with PID: $ANALYTICS_PID"
           
-          # Start Notifications Service (port 8004)
-          cd ../notifications
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 &
+          (cd services/notifications && CI=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8004) &
           NOTIFICATIONS_PID=$!
           echo "📢 Notifications service started with PID: $NOTIFICATIONS_PID"
           
-          # Wait for services to be ready
-          echo "⏳ Waiting for services to be ready..."
-          sleep 10
+          # Store PIDs for cleanup
+          echo "$AUTH_PID $PROFILE_PID $ANALYTICS_PID $NOTIFICATIONS_PID" > /tmp/service_pids
           
-          # Health check all services
-          echo "🔍 Health checking services..."
+          # Smart health check with shorter timeout
+          echo "🔍 Waiting for services to be ready..."
           for port in 8001 8002 8003 8004; do
             echo "Checking port $port..."
-            timeout 10s bash -c "until curl -s http://localhost:$port/healthz > /dev/null; do sleep 1; done" || echo "Service on port $port not ready"
+            timeout 30s bash -c "until curl -s http://localhost:$port/healthz > /dev/null 2>&1; do sleep 0.5; done" && echo "✅ Service on port $port ready" || echo "⚠️ Service on port $port not ready"
           done
           
-          echo "✅ All services started and ready for OpenAPI generation"
+          echo "✅ Service startup completed"
       
       # Lint live OpenAPI specs from running services
       - name: Lint Live OpenAPI Specs
         run: |
           echo "🔍 Linting live OpenAPI specs from running services..."
           
-          # Additional wait to ensure services are fully ready
-          sleep 5
+          # Read PIDs from file
+          SERVICE_PIDS=$(cat /tmp/service_pids)
           
-          # Test OpenAPI endpoints before linting
-          echo "🧪 Testing OpenAPI endpoints availability..."
-          for port in 8001 8002 8003 8004; do
-            echo "Testing port $port..."
-            curl -s "http://localhost:$port/healthz" || echo "Health check failed for port $port"
-          done
+          # Parallel linting function
+          lint_service() {
+            local service=$1
+            local port=$2
+            local endpoint="http://localhost:$port/api/$service/openapi.json"
+            
+            echo "🔍 Linting $service service..."
+            if curl -s "$endpoint" > /dev/null 2>&1; then
+              if spectral lint "$endpoint" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error; then
+                echo "✅ $service service OpenAPI spec validated"
+                return 0
+              else
+                echo "❌ $service service OpenAPI spec validation failed"
+                return 1
+              fi
+            else
+              echo "❌ $service service OpenAPI endpoint not accessible"
+              return 1
+            fi
+          }
           
-          # Lint each service's live OpenAPI spec with better error handling
-          echo "🔐 Linting Auth Service OpenAPI spec..."
-          if curl -s "http://localhost:8001/api/auth/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8001/api/auth/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
-            echo "✅ Auth service OpenAPI spec validated"
-          else
-            echo "❌ Auth service OpenAPI endpoint not accessible"
-            exit 1
-          fi
+          # Run linting in parallel
+          lint_service "auth" 8001 &
+          LINT_PID1=$!
+          lint_service "profile" 8002 &
+          LINT_PID2=$!
+          lint_service "analytics" 8003 &
+          LINT_PID3=$!
+          lint_service "notifications" 8004 &
+          LINT_PID4=$!
           
-          echo "👤 Linting Profile Service OpenAPI spec..."
-          if curl -s "http://localhost:8002/api/profile/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8002/api/profile/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
-            echo "✅ Profile service OpenAPI spec validated"
-          else
-            echo "❌ Profile service OpenAPI endpoint not accessible"
-            exit 1
-          fi
+          # Wait for all linting processes and collect results
+          wait $LINT_PID1; RESULT1=$?
+          wait $LINT_PID2; RESULT2=$?
+          wait $LINT_PID3; RESULT3=$?
+          wait $LINT_PID4; RESULT4=$?
           
-          echo "📊 Linting Analytics Service OpenAPI spec..."
-          if curl -s "http://localhost:8003/api/analytics/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8003/api/analytics/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
-            echo "✅ Analytics service OpenAPI spec validated"
-          else
-            echo "❌ Analytics service OpenAPI endpoint not accessible"
-            exit 1
-          fi
-          
-          echo "📢 Linting Notifications Service OpenAPI spec..."
-          if curl -s "http://localhost:8004/api/notifications/openapi.json" > /dev/null; then
-            spectral lint "http://localhost:8004/api/notifications/openapi.json" --ruleset libs/contracts/.spectral.yaml -f stylish -D --fail-severity=error || exit 1
-            echo "✅ Notifications service OpenAPI spec validated"
-          else
-            echo "❌ Notifications service OpenAPI endpoint not accessible"
+          # Check if any failed
+          if [ $RESULT1 -ne 0 ] || [ $RESULT2 -ne 0 ] || [ $RESULT3 -ne 0 ] || [ $RESULT4 -ne 0 ]; then
+            echo "❌ Some OpenAPI specs failed validation"
+            # Cleanup services
+            kill $SERVICE_PIDS 2>/dev/null || true
             exit 1
           fi
           
@@ -130,22 +127,23 @@ jobs:
           
           # Cleanup: Stop all services
           echo "🧹 Cleaning up services..."
-          kill $AUTH_PID $PROFILE_PID $ANALYTICS_PID $NOTIFICATIONS_PID 2>/dev/null || true
+          kill $SERVICE_PIDS 2>/dev/null || true
           echo "✅ Services cleaned up"
 
   unit_tests:
-    needs: contracts_lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
       - run: pip install -r requirements.txt
       - run: pytest -q
 
   build_and_push:
-    needs: unit_tests
+    needs: [contracts_lint, unit_tests]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
@@ -175,6 +173,8 @@ jobs:
         with:
           context: ./services/${{ matrix.service }}
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/${{ matrix.service }}:${{ github.sha }}
             ghcr.io/${{ env.OWNER_LC }}/${{ matrix.service }}:${{ github.ref_name }}
@@ -272,9 +272,9 @@ jobs:
             fi
           done
           
-          # Wait a bit for cleanup to complete
+          # Reduced wait time for cleanup
           echo "⏳ Waiting for cleanup to complete..."
-          sleep 30
+          sleep 10
           
           # Function to check if a release is in progress
           check_release_status() {
@@ -370,8 +370,8 @@ jobs:
             while [ $retry_count -le $max_retries ] && [ "$deploy_success" = false ]; do
               if [ $retry_count -gt 0 ]; then
                 echo "🔄 Retry $retry_count/$max_retries for $svc..."
-                # Wait a bit before retry
-                sleep 30
+                # Reduced retry wait time
+                sleep 10
               fi
               
               if helm upgrade --install "$svc" "deploy/helm/$svc" \
