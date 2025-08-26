@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 # revision identifiers, used by Alembic.
 revision = '0004_add_updated_at_to_users'
-down_revision = '0003_refresh_token_length'
+down_revision = '0003_increase_refresh_token_length'
 branch_labels = None
 depends_on = None
 
