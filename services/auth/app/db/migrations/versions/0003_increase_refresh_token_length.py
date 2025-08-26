@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '0003_increase_refresh_token_length'
+revision = '0003_refresh_token_length'
 down_revision = '0002_add_timestamps'
 branch_labels = None
 depends_on = None
