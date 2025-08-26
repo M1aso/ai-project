@@ -38,12 +38,15 @@ spec:
                 current_revision=$(alembic current 2>/dev/null || echo "failed")
                 echo "Current database revision check: $current_revision"
                 
+                # Clean revision string - remove (head) suffix if present
+                clean_revision=$(echo "$current_revision" | sed 's/ (head)$//')
+                
                 # Check if there's a mismatch between database state and expected migration chain
                 # This happens when the database is at an earlier revision than what Alembic expects
                 if [ "$current_revision" != "failed" ]; then
-                  # Check if the current revision exists in the migration files
-                  if ! ls versions/*.py | grep -q "$current_revision"; then
-                    echo "Current revision $current_revision not found in migration files, forcing reset..."
+                  # Check if the current revision exists in the migration files (use clean revision)
+                  if ! ls versions/*.py | grep -q "$clean_revision"; then
+                    echo "Current revision $clean_revision not found in migration files, forcing reset..."
                     current_revision="failed"
                   else
                     # Check if we can proceed with upgrade from current revision
@@ -67,7 +70,9 @@ spec:
                   
                   # Reset database migration state completely
                   echo "🔄 Resetting migration table..."
-                  python3 -c "import os,psycopg2; conn=psycopg2.connect(os.getenv('DATABASE_URL').replace('postgresql+asyncpg://','postgresql://').replace('postgresql://','postgresql://')); conn.set_session(autocommit=True); cur=conn.cursor(); cur.execute('DROP TABLE IF EXISTS alembic_version CASCADE'); cur.execute('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))'); conn.close(); print('Migration table reset complete')"
+                  service_name="{{ .Values.serviceName }}"
+                  table_name="alembic_version_${service_name}"
+                  python3 -c "import os,psycopg2; conn=psycopg2.connect(os.getenv('DATABASE_URL').replace('postgresql+asyncpg://','postgresql://').replace('postgresql://','postgresql://')); conn.set_session(autocommit=True); cur=conn.cursor(); cur.execute('DROP TABLE IF EXISTS ${table_name} CASCADE'); cur.execute('CREATE TABLE ${table_name} (version_num VARCHAR(32) NOT NULL, CONSTRAINT ${table_name}_pkc PRIMARY KEY (version_num))'); conn.close(); print('Migration table reset complete')" | envsubst
                   
                   # Stamp with latest migration
                   latest_file=$(ls versions/*.py | sort | tail -1)

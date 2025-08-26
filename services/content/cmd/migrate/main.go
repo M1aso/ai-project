@@ -13,7 +13,7 @@ import (
 const dialect = "postgres"
 
 func main() {
-	var dir = flag.String("dir", "internal/db/migrations", "directory with migration files")
+	var dir = flag.String("dir", "/internal/db/migrations", "directory with migration files")
 	flag.Parse()
 
 	dbURL := os.Getenv("DATABASE_URL")
