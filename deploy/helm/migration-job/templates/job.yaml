@@ -68,12 +68,6 @@ spec:
                 if [ "$current_revision" = "failed" ] || echo "$current_revision" | grep -q "Can't locate revision"; then
                   echo "Database has corrupted migration state, performing complete reset..."
                   
-                  # Install envsubst if not available
-                  if ! command -v envsubst >/dev/null 2>&1; then
-                    echo "Installing envsubst..."
-                    apt-get update -qq && apt-get install -y -qq gettext-base
-                  fi
-                  
                   # Reset database migration state completely
                   echo "🔄 Resetting migration table..."
                   python3 -c "import os,psycopg2; conn=psycopg2.connect(os.getenv('DATABASE_URL').replace('postgresql+asyncpg://','postgresql://').replace('postgresql://','postgresql://')); conn.set_session(autocommit=True); cur=conn.cursor(); cur.execute('DROP TABLE IF EXISTS alembic_version_{{ .Values.serviceName }} CASCADE'); cur.execute('CREATE TABLE alembic_version_{{ .Values.serviceName }} (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_{{ .Values.serviceName }}_pkc PRIMARY KEY (version_num))'); conn.close(); print('Migration table reset complete')"
