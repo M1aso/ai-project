@@ -14,6 +14,8 @@ env:
     value: "redis://redis-master.redis.svc.cluster.local:6379"
   - name: RABBITMQ_URL
     value: "amqp://admin:admin123@rabbitmq.rabbitmq.svc.cluster.local:5672"
+  - name: JWT_SECRET_KEY
+    value: "dev-jwt-secret-not-for-production-change-in-prod"
   - name: SMTP_HOST
     value: "smtp.gmail.com"
   - name: SMTP_PORT

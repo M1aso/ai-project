@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
 
 from ..worker import enqueue
+from ..auth import get_current_user
 
 router = APIRouter(prefix="/api/notify", tags=["notify"])
 
@@ -24,13 +25,20 @@ class Notification(BaseModel):
 
 
 @router.post("/send", status_code=202)
-def send_notification(payload: Notification):
+def send_notification(
+    payload: Notification, 
+    current_user: Dict[str, any] = Depends(get_current_user)
+):
+    """Send a notification (requires authentication)."""
     enqueue(payload.dict())
-    return {"status": "queued"}
+    return {"status": "queued", "user_id": current_user["user_id"]}
 
 
 @router.post("/preview")
-def preview_notification(payload: Notification):
+def preview_notification(
+    payload: Notification,
+    current_user: Dict[str, any] = Depends(get_current_user)
+):
     ext_map = {"email": "mjml", "sms": "txt", "push": "json"}
     ext = ext_map.get(payload.channel)
     if not ext:
