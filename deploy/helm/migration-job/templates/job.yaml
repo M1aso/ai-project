@@ -72,7 +72,16 @@ spec:
                   echo "🔄 Resetting migration table..."
                   service_name="{{ .Values.serviceName }}"
                   table_name="alembic_version_${service_name}"
-                  python3 -c "import os,psycopg2; conn=psycopg2.connect(os.getenv('DATABASE_URL').replace('postgresql+asyncpg://','postgresql://').replace('postgresql://','postgresql://')); conn.set_session(autocommit=True); cur=conn.cursor(); cur.execute('DROP TABLE IF EXISTS ${table_name} CASCADE'); cur.execute('CREATE TABLE ${table_name} (version_num VARCHAR(32) NOT NULL, CONSTRAINT ${table_name}_pkc PRIMARY KEY (version_num))'); conn.close(); print('Migration table reset complete')" | envsubst
+                  python3 -c "
+import os,psycopg2
+conn=psycopg2.connect(os.getenv('DATABASE_URL').replace('postgresql+asyncpg://','postgresql://').replace('postgresql://','postgresql://'))
+conn.set_session(autocommit=True)
+cur=conn.cursor()
+cur.execute('DROP TABLE IF EXISTS alembic_version_{{ .Values.serviceName }} CASCADE')
+cur.execute('CREATE TABLE alembic_version_{{ .Values.serviceName }} (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_{{ .Values.serviceName }}_pkc PRIMARY KEY (version_num))')
+conn.close()
+print('Migration table reset complete')
+"
                   
                   # Stamp with latest migration
                   latest_file=$(ls versions/*.py | sort | tail -1)
