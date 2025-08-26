@@ -18,7 +18,13 @@ jobs:
       
       # Install Spectral CLI for OpenAPI validation
       - name: Install Spectral CLI
-        run: npm install -g @stoplight/spectral-cli
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm cache clean --force
+          # Try specific version first, fallback to latest stable
+          npm install -g @stoplight/spectral-cli@6.11.0 --verbose || \
+          npm install -g @stoplight/spectral-cli@6.10.1 --verbose || \
+          npm install -g @stoplight/spectral-cli --verbose
       
       # Start services in CI environment to generate live OpenAPI specs
       - name: Setup Python environment
