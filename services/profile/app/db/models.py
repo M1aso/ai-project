@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -22,6 +23,12 @@ class ExperienceLevel(Base):
     id = Column(Integer, primary_key=True)
     label = Column(String(50), nullable=False)
     sequence = Column(Integer, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
 class Profile(Base):
@@ -43,8 +50,11 @@ class Profile(Base):
     position = Column(String(150))
     experience_id = Column(Integer, ForeignKey("experience_levels.id"), nullable=True)
     avatar_url = Column(String(255))
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     updated_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     experience = relationship("ExperienceLevel")
@@ -65,7 +75,10 @@ class SocialBinding(Base):
     )
     provider = Column(String(20), nullable=False)
     provider_id = Column(String(255))
-    linked_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    linked_at = Column(DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
 class ProfileHistory(Base):
@@ -79,9 +92,12 @@ class ProfileHistory(Base):
     old_value = Column(Text)
     new_value = Column(Text)
     changed_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
     changed_by = Column(String(36))
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
 

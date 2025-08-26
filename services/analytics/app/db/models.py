@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Integer, String, JSON
+from sqlalchemy import Column, DateTime, Integer, String, JSON, text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -13,5 +13,11 @@ class Event(Base):
     type = Column(String(50), nullable=False)
     src = Column(String(100))
     payload = Column(JSON, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
 
 
