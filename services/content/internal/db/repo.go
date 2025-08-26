@@ -27,9 +27,9 @@ func (r *Repo) CreateCourse(ctx context.Context, c Course) error {
 func (r *Repo) GetCourse(ctx context.Context, id string) (Course, error) {
 	var c Course
 	err := r.DB.QueryRowContext(ctx,
-		`SELECT id, title, description, status, created_at FROM courses WHERE id = ?`,
+		`SELECT id, title, description, status, created_at, updated_at FROM courses WHERE id = ?`,
 		id,
-	).Scan(&c.ID, &c.Title, &c.Description, &c.Status, &c.CreatedAt)
+	).Scan(&c.ID, &c.Title, &c.Description, &c.Status, &c.CreatedAt, &c.UpdatedAt)
 	return c, err
 }
 
@@ -37,8 +37,8 @@ func (r *Repo) GetCourse(ctx context.Context, id string) (Course, error) {
 func (r *Repo) GetMaterial(ctx context.Context, id string) (Material, error) {
 	var m Material
 	err := r.DB.QueryRowContext(ctx,
-		`SELECT id, section_id, type, title, status, created_at FROM materials WHERE id = ?`,
+		`SELECT id, section_id, type, title, status, created_at, updated_at FROM materials WHERE id = ?`,
 		id,
-	).Scan(&m.ID, &m.SectionID, &m.Type, &m.Title, &m.Status, &m.CreatedAt)
+	).Scan(&m.ID, &m.SectionID, &m.Type, &m.Title, &m.Status, &m.CreatedAt, &m.UpdatedAt)
 	return m, err
 }

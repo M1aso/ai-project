@@ -9,6 +9,7 @@ type Course struct {
 	Description string    `db:"description"`
 	Status      string    `db:"status"`
 	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
 }
 
 // Section represents a section row.
@@ -18,6 +19,7 @@ type Section struct {
 	Title     string    `db:"title"`
 	Sequence  int       `db:"sequence"`
 	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 // Material represents a learning material.
@@ -28,6 +30,7 @@ type Material struct {
 	Title     string    `db:"title"`
 	Status    string    `db:"status"`
 	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 // MediaAsset represents an uploaded file linked to material.
@@ -37,10 +40,13 @@ type MediaAsset struct {
 	URL        string    `db:"url"`
 	Status     string    `db:"status"`
 	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
 }
 
 // Tag represents a course tag.
 type Tag struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
+	ID        string    `db:"id"`
+	Name      string    `db:"name"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
